@@ -1,0 +1,20 @@
+'
+' Multiplication Table program
+'
+' Copyright (C) Altera Corporation 1997
+'
+
+PRINT "Multtbl";
+
+INTEGER min = -10;
+INTEGER max = 10;
+INTEGER a;
+INTEGER b;
+
+FOR a = min TO max;
+	FOR b = min TO max;
+		PRINT a, " * ", b, " = ", a * b;
+	NEXT b;
+NEXT a;
+
+EXIT 0;

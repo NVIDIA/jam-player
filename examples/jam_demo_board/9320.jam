@@ -1,0 +1,1235 @@
+' Copyright (C) 1991-1997 Altera Corporation
+' Any megafunction design, and related net list (encrypted or decrypted),
+' support information, device programming or simulation file, and any other
+' associated documentation or information provided by Altera or a partner
+' under Altera's Megafunction Partnership Program may be used only to
+' program PLD devices (but not masked PLD devices) from Altera.  Any other
+' use of such megafunction design, net list, support information, device
+' programming or simulation file, or any other related documentation or
+' information is prohibited for any other purpose, including, but not
+' limited to modification, reverse engineering, de-compiling, or use with
+' any other silicon devices, unless such use is explicitly licensed under
+' a separate agreement with Altera or a megafunction partner.  Title to
+' the intellectual property, including patents, copyrights, trademarks,
+' trade secrets, or maskworks, embodied in any such megafunction design,
+' net list, support information, device programming or simulation file, or
+' any other related documentation or information provided by Altera or a
+' megafunction partner, remains with Altera, the megafunction partner, or
+' their respective licensors.  No other licenses, including any licenses
+' needed under any third party's intellectual property, are provided herein.
+
+NOTE CREATOR "POF to JAM converter Version 8.1 B 3.4 6/27/97";
+
+NOTE DEVICE "EPM9320";
+
+'Device #1: EPM9320 - d:\jam\jamdemo\9320.pof Wed May 21 17:20:02 1997
+
+BOOLEAN A23[245208] = ACA
+xU700u@@@@3q6aP86Zmm4CO1kE@z@@zW7RH5lX7Jy@7hMyzU@th2fXXneRcay@7X
+ju@txrzUlNFW7@25DDOm2G1L0Aq3KXUlt@M23y_@@@6iXtx@@W2XYCer_@@V8pRy
+_@ttRCmzV@tZ36sxzUT@@@t3inCG6fFpK7XHia7t4sC84K1HKkt@zsqOW@@tVx@U
+l1PmG@@xzmc7Y_eIQh4yVlt@3Q3@@xz@WQ9lYGP96p@@hbrQjMM@@@PBhe7W4_@@
+Vt2OW@@@L@w@@5Dnm@@@wgW7I6inppYYCWS8Z@ZbyVGc@Z_yVyg@3azV4E8PjMZD
+qdDw1u1@@@liy@@3zn0lw@@bBYX@@@bGV_t@@VVCHKHhrQiVf7yZn@7i49UjMB@n
+a1@7hr1BPf@z@ree0hcXMylMhfrQikMKCyl6h5U56__rV3lQ3@@QfXNzVN3s4Gc1
+dNOmthIu@@nAWCCy@@Fw7@@FWiD4hn@7Gs@@vQ3jMZrGuse7092Xx4FMZrXmXgVz
+z@OxKq@QDMGVRq3W41zbW@VvtW__@FQgAYHYEJy8Cn@ZVy@0B@FKKIy@hM@yk1_V
+rV35T3VlQjXY_VCg@7Lh@3tr@n1x@0azV8r_FMR@74k@ZEtF_@Ng3Rt@PLQfuvzV
+W__FGV@7el@3qt@1wx@0z5hNhbw0z5U9xi96L@7yg@3Gs@Hdx@0azV8r_FGVcPj6
+hDMR@7FFZzwly7el@hJ4Lnpx@0zzVW_mkYCB5Fl@3qt@1wx@0zzVW__FGV@7el@3
+qtdTZoc0zzVyy_FGV@7Fl@3qt@1wx@0zzVW__FGV@7Tk@Zd7@mQjM3qt@1wpU6@@
+@1wx@0zreQi_@0zzVW__FUU@7el@ZEt@npx@0zzVW__FUU@7el@3qt@1wx@0zzVW
+__FGV@NhlVy@xzwUltR105K1W4it@zM105w1W7b1OZ61mm@@wA_VCu@@@kR09u@@
+Vl20AqyF9w1G5f0WY61aGM26xY1Fa20AY20AX284zUl@zFeY72eLM2kAo0TbNXnI
+uG2XCWX4EGRa1OBw3C4C2soC1ONbeYo00JZ0cPC1CN@2FsMWANCWd16eUr4KlPVB
+f@t@t@@zl@@@V__@@xzBag0OW@@@tK9yVaKOp@@ll@@@V@x@@3E0Z40GGJ0COY6o
+vtt@@326ux@@t@@@@30Cu506S70II3G292WXz0GoaN0p@@tcjjjDRRRRsss_c0W1
+D0mWC0amV0_9b5@tkFjy@VRVqW4OR@@ps@@djz@DV@@x47amV0_fFEfr@l4y@@rN
+uZ@7Co@1Ev@00cWx@@@rRmmI9wznVdKFZ4u@VRp@@ss@ljj@@RR@sssajjjPRRRp
+s@@@F0putsVV956y7WG6z76P41ZRJCJ00dPVA_rG16o@t6f1f2xRR@n2n0Rx@@@1
+O6xRRRf4nW@0420;
+
+BOOLEAN A24[214488] = ACA
+xY600u@@@@3q6aP86ZmCu@@_lX1_@l@lmW7vn7@@tbCuL9aJUy@@@x@@1e16aS60
+m@0000000@300070_3000000mF0@V7L45Ou@V@FKg0m0050000000y0000EW1000
+0aCC4F9q39K1Aa2K000010k2000000m00HM2_@Z@5m@@x@@@t0@@V69HkaGUmmYA
+KgI2@@n@zg4y@@@u@@@t@@@waC1Fy@@X2eMCH5PGEazViq@1P@7M_Vyw@1o_VhfD
+_@@l7VcWt@@@GVgC7WX3194w3F@@l@n4bUJh11BRPpX1JEC8Yf11Bnp@@tVBZ7YY
+Uh@t@@dBF4UzaMm9SXmWmhDw@@zFkBy@nPOB43HbJm@@@L0v@3X@cx@@@i1De2W4
+k7yX2vC84Epw5KYOxkjn732wRcfJIuy462wx@e1thD66kqqZm4@Fmo@ZuKtwnCu1
+c4y@@p7Aw@ne_Vmh@7kx@n1@V0o@7Iz@nQ@VGu@7T_LlqpGOx97zg4Ydt@1wx@0z
+zVW__FGV@7el@3qt@1@uX0zjQJxg8KK@7Zg@Zrs@1Xx@uWzVis_FGV@7tlVcUd4X
+jx@0zXKRYU8UU3tc832Rt@1wx@0zzV1P89UU@7el@3qt@1wx@0zzVW__FGV@7elX
+h5b41wx@0zzVOx_FUU@7el@3qt@1wx@0zzVW__FGV@7sk@3qNxNUQZ0zzVW_mp@@
+@NW__FGVGkPj72qt@1wx@0zzVqv_FiT@7Fl@3qt@1wx@uvzVW__FGV@7el@3qt@1
+wx@0zzV8@2n@@30000010G0D0mW40G0020W00MXF_@V_@l@_@@@v@@_d002yl@@d
+70940000000O105K105000W@2WAo3W4H1GYC2K1007Wq2GIK0g8tV6ygFOcFW1fy
+3co4OGG@IuJ0Ci90OordJ_@@_z_@@xl@@t@@xR0099sI6yf8IQDWV150qY@rYz@@
+@cNjX_@@V@t@@D1mWB9yc@@@Nl@@@_@@Vz@@Vt_F3U0W1l0mWx0GIQ0I8H09i70I
+ApmO_ljjPRRRpssscjzjz40Ce106i203ORR@@7WV6qm@fdGB@jjjtDm0jzljw@VR
+z@@sg@lzr@VRRe3CGRR@@V0_fh5c5g1320e1_l_@@Mn@Tpu@jTyV00Dm@@V@wDU8
+X8w_3EIy@@@x@@jjX66ejjztVRxl@s_Vljz@_RxVrssosJ33_3WDQ@z@NIX1@xBd
+pgmpj9O80WsiF5@Qe03n@33@@@sf1H2sss_ij@@Z5Y1dzpZ@0WH4HIeyVX0;
+
+NOTE JAM_VERSION "1.0";
+NOTE ALG_VERSION "1.0";
+INTEGER A0[12] =
+791, 237, 253, 261, 273, 281, 293, 317, 791, 791, 791, 791;
+INTEGER A1[12] =
+640, 80, 160, 240, 320, 400, 480, 640, 160, 200, 240, 280;
+INTEGER A2[12] =
+165, 0, 0, 0, 0, 0, 0, 0, 165, 165, 165, 165;
+INTEGER A3[12] =
+112, 0, 0, 0, 0, 0, 0, 0, 64, 80, 96, 112;
+INTEGER A4[12] =
+648, 0, 0, 0, 0, 0, 0, 0, 504, 552, 600, 648;
+INTEGER A5[12] =
+128, 16, 32, 48, 64, 80, 96, 128, 32, 40, 48, 56;
+INTEGER A6[12] =
+16, 2, 4, 6, 8, 10, 12, 16, 0, 0, 0, 0;
+INTEGER A7[12] =
+7, 0, 0, 0, 0, 0, 0, 0, 4, 5, 6, 7;
+INTEGER A8[12] =
+560, 32, 64, 96, 128, 160, 192, 256, 320, 400, 480, 560;
+INTEGER A9[21] =
+126, 3, 1, 118, 1, 3, 0, 0, 0, 131, 3, 6, 0, 0, 0, 131, 3, 8, 131, 3, 12;
+INTEGER A10[14] = 1, 1, 1, 3, 0, 0, 3, 6, 0, 0, 3, 8, 3, 12;
+INTEGER V53 = 3;
+INTEGER V54 = 3;
+INTEGER A11[V53 * V54 * 11] =
+0, 0, 0, 0, 0, 0, 0, 0, 0,
+96, 1, 0, 97, 0, 1, 0, 0, 0,
+0, 0, 0, 0, 0, 0, 0, 0, 0,
+96, 0, 0, 97, 0, 1, 96, 1, 2,
+0, 0, 0, 0, 0, 0, 0, 0, 0,
+96, 0, 0, 0, 0, 0, 0, 0, 0,
+96, 2, 0, 97, 0, 1, 96, 1, 2,
+94, 1, 0, 0, 0, 0, 0, 0, 0,
+95, 0, 0, 0, 0, 0, 0, 0, 0,
+95, 0, 0, 0, 0, 0, 0, 0, 0,
+94, 1, 0, 0, 0, 0, 0, 0, 0;
+INTEGER A14[64] =
+20, 40, 60, 80, 100, 120, 140, 160, 180, 200, 220, 240,
+260, 280, 300, 340, 360, 380, 400, 440, 480, 520, 560, 600,
+660, 720, 800, 900, 1000, 1300, 1600, 2000,
+3, 4, 5, 7, 9, 11, 12, 14, 16, 20, 24, 28,
+36, 50, 64, 86, 116, 154, 200, 280, 360, 480, 640, 860,
+1140, 1540, 2000, 2800, 3600, 4800, 6400, 8600;
+INTEGER A15[16] =
+10, 20, 30, 40, 60, 100, 200, 500,
+100, 260, 660, 1660, 4200, 10800, 28000, 60000;
+' VARIABLES
+INTEGER V0 = 1;
+INTEGER A12[V0] = 8;
+INTEGER A13[V0] = 2 | 4;
+INTEGER A25[V0] = 10;
+INTEGER V1 = V0 - 1;
+INTEGER V2 = 0;
+INTEGER V3 = 0;
+INTEGER V4 = 2;
+INTEGER A17[V0];
+BOOLEAN b;
+INTEGER i;
+INTEGER j;
+INTEGER k;
+INTEGER l;
+INTEGER V10;
+INTEGER V11;
+INTEGER V12;
+INTEGER V13;
+BOOLEAN A18[10];
+BOOLEAN A19[10];
+BOOLEAN A20[10];
+INTEGER V14;
+INTEGER V15;
+INTEGER V17;
+INTEGER V18;
+INTEGER V19;
+INTEGER V20;
+INTEGER V22;
+INTEGER V23;
+INTEGER V24;
+INTEGER V25;
+INTEGER V26;
+INTEGER V27;
+INTEGER V28;
+INTEGER V29 = 1;
+INTEGER A16[15];
+INTEGER V30;
+INTEGER V31;
+INTEGER V32 = 0;
+INTEGER V33 = 0;
+INTEGER V34 = 1;
+INTEGER V35 = 0;
+INTEGER V36 = 0;
+INTEGER V37 = 0;
+INTEGER V38 = 0;
+INTEGER V70 = 0;
+INTEGER V71 = 0;
+BOOLEAN V39 = 0;
+BOOLEAN V40 = 0;
+INTEGER V41 = 0;
+INTEGER V42 = 0;
+BOOLEAN V49 = 0;
+BOOLEAN V72 = 0;
+BOOLEAN V73 = 0;
+BOOLEAN V56 = 0;
+BOOLEAN V57 = 0;
+BOOLEAN DO_ERASE = 0;
+BOOLEAN DO_BLANKCHECK = 0;
+BOOLEAN DO_PROGRAM = 0;
+BOOLEAN DO_VERIFY = 0;
+BOOLEAN DO_SECURE = 0;
+BOOLEAN DO_SECURE_ALL = 0;
+L0:
+CALL L3;
+LET V4 = 2;
+CALL L16;
+IF (V2 == 0) THEN GOTO L1;
+IF (V42 == 0) THEN CALL L39;
+IF ((V42 == 0) && DO_ERASE) THEN CALL L24;
+IF ((V42 == 0) && DO_BLANKCHECK) THEN CALL L32;
+IF ((V42 == 0) && DO_PROGRAM) THEN CALL L22;
+IF ((V42 == 0) && DO_VERIFY) THEN CALL L30;
+IF ((V42 == 0) && DO_SECURE) THEN CALL L131;
+L1:
+CALL L14;
+EXIT V42;
+L3:
+INTEGER V65 = 0;
+IF (DO_PROGRAM) THEN LET DO_ERASE = 1;
+IF (DO_SECURE_ALL) THEN LET DO_SECURE = 1;
+IF ((DO_ERASE || DO_BLANKCHECK) && !DO_PROGRAM &&
+(DO_VERIFY || DO_SECURE)) THEN LET V42 = 1;
+IF (V42 != 0) THEN GOTO L13;
+LET V22 = 0;
+FOR i = 0 TO V1;
+LET j = 1;
+LET k = 1;
+IF (((A13[i] & 2) == 0) ||
+((A13[i] & 4) == 0)) THEN GOTO L7;
+LET V2 = A12[i];
+LET j = A1[V2];
+LET k = A5[V2];
+L7:
+LET V22 = V22 + j;
+LET V65 = V65 + k;
+NEXT i;
+BOOLEAN A27[V22];
+LET k = 0;
+FOR i = 0 TO V1;
+IF (((A13[i] & 2) == 0) ||
+((A13[i] & 4) == 0)) THEN GOTO L8;
+LET V2 = A12[i];
+FOR j = 0 TO (A1[V2] - 1);
+IF ((j % 5) == 4) THEN LET A27[k] = 1;
+LET k = k + 1;
+NEXT j;
+GOTO L9;
+L8:
+LET k = k + 1;
+L9:
+NEXT i;
+LET V17 = 0;
+FOR i = 0 TO V1;
+LET j = 1;
+IF (((A13[i] & 2) == 0) ||
+((A13[i] & 4) == 0)) THEN GOTO L11;
+LET V2 = A12[i];
+LET j = A0[V2];
+L11:
+LET V17 = V17 + j;
+NEXT i;
+LET V18 = V17;
+BOOLEAN A28[V18];
+LET V19 = V18;
+BOOLEAN A29[V19];
+BOOLEAN A30[V19];
+FOR i = 0 TO (V19 - 1);
+LET A30[i] = 1;
+NEXT i;
+LET V20 = 2 * 5 * 5 * V65;
+BOOLEAN A31[V20];
+LET V33 = 0;
+FOR i = 0 TO V1;
+IF (((A13[i] & 2) == 0) ||
+((A13[i] & 4) == 0)) THEN GOTO L12;
+LET V2 = A12[i];
+IF (V33 < A7[V2]) THEN
+LET V33 = A7[V2];
+L12:
+NEXT i;
+LET V12 = 0;
+LET V13 = 0;
+FOR i = 0 TO V1;
+LET V12 = V12 + A25[i];
+IF (A25[i] > V13) THEN LET V13 = A25[i];
+NEXT i;
+BOOLEAN A32[V12 + 50];
+BOOLEAN A39[V13];
+BOOLEAN A33[V13];
+FOR i = 0 TO (V13 - 1);
+LET A39[i] = 1;
+NEXT i;
+BOOLEAN A34[50];
+BOOLEAN A35[50];
+BOOLEAN A36[50];
+BOOLEAN A37[50];
+BOOLEAN A38[70];
+FOR i = 0 TO 4;
+LET j = 10 * i;
+LET A34[j..(j + 9)] = 016;
+LET A35[j..(j + 9)] = 01A;
+LET A36[j..(j + 9)] = 022;
+LET A37[j..(j + 9)] = 026;
+FOR k = 0 TO 2;
+LET b = 0;
+IF ((i & (1 << k)) != 0) THEN LET b = 1;
+LET A34[j + k + 7] = b;
+LET A35[j + k + 7] = b;
+LET A36[j + k + 7] = b;
+LET A37[j + k + 7] = b;
+NEXT k;
+NEXT i;
+FOR i = 0 TO 6;
+LET j = 10 * i;
+LET A38[j..(j + 9)] = 02A;
+FOR k = 0 TO 2;
+LET b = 0;
+IF ((i & (1 << k)) != 0) THEN LET b = 1;
+LET A38[j + k + 7] = b;
+NEXT k;
+NEXT i;
+CALL L19;
+IRSTOP IRPAUSE;
+DRSTOP IDLE;
+PADDING 0, 0, 0, 0;
+STATE RESET;
+STATE IDLE;
+LET A18[0..9] = 071;
+LET V4 = 2;
+CALL L143;
+WAIT 10000 USEC;
+L13:
+RETURN;
+L14:
+IF (V42 == 1) THEN GOTO L15;
+CALL L20;
+LET A18[0..9] = 079;
+CALL L143;
+WAIT 10000 USEC;
+STATE RESET;
+L15:
+IF (V42 == 0) THEN
+PRINT "DONE";
+IF (V42 == 1) THEN
+PRINT CHR$(7), CHR$(7), CHR$(7),
+"Invalid option combination specified";
+IF (V42 == 2) THEN
+PRINT CHR$(7), CHR$(7), CHR$(7),
+"Unrecognized device";
+IF (V42 == 3) THEN
+PRINT CHR$(7), CHR$(7), CHR$(7),
+"Device revision is not supported";
+IF (V42 == 4) THEN
+PRINT CHR$(7), CHR$(7), CHR$(7),
+"Device programming failure";
+IF (V42 == 5) THEN
+PRINT CHR$(7), CHR$(7), CHR$(7),
+"Device is not blank";
+IF (V42 == 6) THEN
+PRINT CHR$(7), CHR$(7), CHR$(7),
+"Device verify failure";
+RETURN;
+L16:
+LET j = 0;
+FOR i = 0 TO V1;
+IF ((j <= V3) &&
+((A13[i] & V4) != 0) &&
+((A13[i] & 4) != 0)) THEN LET j = i + 1;
+NEXT i;
+IF (j > V3) THEN GOTO L17;
+LET V2 = 0;
+LET V3 = 0;
+GOTO L18;
+L17:
+LET V2 = A12[j - 1];
+LET V3 = j;
+L18:
+RETURN;
+L19:
+CALL L20;
+IF (V32 == 0) THEN CALL L142;
+LET V10 = 0;
+LET V14 = 0;
+LET V15 = 0;
+LET V49 = 1;
+LET V34 = 0;
+LET V29 = 1;
+IF (DO_PROGRAM) THEN LET V29 = 0;
+IF (DO_ERASE && V72) THEN LET V29 = 2;
+RETURN;
+L20:
+FOR i = 0 TO V1;
+LET A17[i] = A13[i];
+NEXT i;
+RETURN;
+L22:
+PRINT "programming 9K device(s)...";
+CALL L19;
+FOR V11 = 1035 TO 1196;
+CALL L100;
+CALL L121;
+NEXT V11;
+LET V49 = 1;
+FOR V11 = 2069 TO 2074;
+CALL L100;
+CALL L121;
+CALL L20;
+NEXT V11;
+LET V49 = 1;
+FOR V11 = 4097 TO 4114;
+CALL L100;
+CALL L121;
+NEXT V11;
+LET V49 = 1;
+FOR V11 = 4869 TO 4886;
+CALL L100;
+CALL L121;
+NEXT V11;
+LET V49 = 1;
+FOR V11 = 8193 TO 8210;
+CALL L100;
+CALL L121;
+NEXT V11;
+LET V49 = 1;
+FOR V11 = 8965 TO 8982;
+CALL L100;
+CALL L121;
+NEXT V11;
+RETURN;
+L24:
+LET A18[0..9] = 392;
+CALL L143;
+LET A18[0..9] = 01E;
+CALL L143;
+DRSCAN V17, A30[0..(V17 - 1)];
+LET A18[0..9] = 396;
+CALL L143;
+DRSCAN V22, A29[0..(V22 - 1)];
+LET A18[0..9] = 006;
+CALL L143;
+LET A18[0..9] = 00A;
+CALL L143;
+LET V56 = 1;
+WAIT (V37 * 100) USEC;
+LET A18[0..9] = 392;
+CALL L143;
+LET A18[0..9] = 39A;
+CALL L143;
+DRSCAN V22, A29[0..(V22 - 1)];
+LET A18[0..9] = 006;
+CALL L143;
+LET A18[0..9] = 00A;
+CALL L143;
+LET V56 = 1;
+WAIT (V37 * 100) USEC;
+LET A18[0..9] = 392;
+CALL L143;
+FOR i = 0 TO (V33 - 1);
+LET j = 10 * i;
+LET k = 0;
+LET A18[0..9] = A38[j..(j + 9)];
+LET V57 = 1;
+FOR j = 0 TO V1;
+IF (((A17[j] & 2) == 0) ||
+((A17[j] & 4) == 0)) THEN GOTO L25;
+LET V2 = A12[j];
+IF (i >= A7[V2]) THEN
+LET A17[j] = A17[j] | 8;
+IF ((A17[j] & 8) != 0) THEN
+LET A29[k..(k + A2[V2] - 1)] =
+A30[0..(A2[V2] - 1)];
+LET k = k + A2[V2] - 1;
+L25:
+LET k = k + 1;
+NEXT j;
+PUSH i;
+CALL L143;
+DRSCAN k, A29[0..(k - 1)];
+LET A18[0..9] = 006;
+CALL L143;
+LET A18[0..9] = 00A;
+CALL L143;
+LET V56 = 1;
+WAIT (V37 * 100) USEC;
+LET A18[0..9] = 392;
+CALL L143;
+POP i;
+NEXT i;
+FOR i = 0 TO (V19 - 1);
+LET A29[i] = 0;
+NEXT i;
+LET j = 0;
+FOR i = 0 TO V1;
+IF (((A17[i] & 2) == 0) ||
+((A17[i] & 4) == 0)) THEN GOTO L26;
+LET V2 = A12[i];
+LET j = j + A3[V2] - 1;
+L26:
+LET j = j + 1;
+NEXT i;
+LET A18[0..9] = 032;
+CALL L143;
+DRSCAN j, A29[0..(j - 1)];
+LET A18[0..9] = 006;
+CALL L143;
+LET A18[0..9] = 00A;
+CALL L143;
+LET V56 = 1;
+WAIT (V37 * 100) USEC;
+LET A18[0..9] = 392;
+CALL L143;
+LET j = 0;
+FOR i = 0 TO V1;
+IF (((A17[i] & 2) == 0) ||
+((A17[i] & 4) == 0)) THEN GOTO L27;
+LET V2 = A12[i];
+LET j = j + A4[V2] - 1;
+L27:
+LET j = j + 1;
+NEXT i;
+LET A18[0..9] = 02E;
+CALL L143;
+DRSCAN j, A29[0..(j - 1)];
+LET A18[0..9] = 006;
+CALL L143;
+LET A18[0..9] = 00A;
+CALL L143;
+LET V56 = 1;
+WAIT (V37 * 100) USEC;
+LET A18[0..9] = 392;
+CALL L143;
+LET A18[0..9] = 392;
+CALL L143;
+LET A18[0..9] = 01E;
+CALL L143;
+DRSCAN V17, A30[0..(V17 - 1)];
+LET A18[0..9] = 006;
+CALL L143;
+LET A18[0..9] = 38E;
+CALL L143;
+LET A18[0..9] = 00A;
+CALL L143;
+LET V56 = 1;
+WAIT (V38 * 1000) USEC;
+LET A18[0..9] = 392;
+CALL L143;
+LET A18[0..9] = 01E;
+CALL L143;
+DRSCAN V17, A29[0..(V17 - 1)];
+LET A18[0..9] = 392;
+CALL L143;
+RETURN;
+L30:
+IF (V72) THEN PRINT "blank checking 9K device(s)...";
+IF (!V72) THEN PRINT "verifying 9K device(s)...";
+CALL L19;
+FOR V11 = 1035 TO 1196;
+CALL L100;
+CALL L76;
+IF (V42 != 0) THEN LET V11 = 1196;
+NEXT V11;
+IF (V42 != 0) THEN GOTO L31;
+LET V49 = 1;
+FOR V11 = 2069 TO 2074;
+CALL L100;
+CALL L76;
+CALL L20;
+IF (V42 != 0) THEN LET V11 = 2074;
+NEXT V11;
+IF (V42 != 0) THEN GOTO L31;
+LET V49 = 1;
+FOR V11 = 4097 TO 4114;
+CALL L100;
+CALL L76;
+IF (V42 != 0) THEN LET V11 = 4114;
+NEXT V11;
+IF (V42 != 0) THEN GOTO L31;
+FOR V11 = 4869 TO 4886;
+CALL L100;
+CALL L76;
+IF (V42 != 0) THEN LET V11 = 4886;
+NEXT V11;
+IF (V42 != 0) THEN GOTO L31;
+LET V49 = 1;
+FOR V11 = 8193 TO 8210;
+CALL L100;
+CALL L76;
+IF (V42 != 0) THEN LET V11 = 8210;
+NEXT V11;
+IF (V42 != 0) THEN GOTO L31;
+FOR V11 = 8965 TO 8982;
+CALL L100;
+CALL L76;
+IF (V42 != 0) THEN LET V11 = 8982;
+NEXT V11;
+L31:
+RETURN;
+L32:
+LET V72 = 1;
+CALL L30;
+LET V72 = 0;
+RETURN;
+L39:
+CALL L19;
+LET V37 = 100;
+LET V38 = 100;
+LET V29 = 1;
+LET V11 = 8192;
+CALL L100;
+LET V34 = 1;
+CALL L76;
+LET V30 = V24 - 1;
+FOR i = V1 TO 0 STEP -1;
+IF (((A17[i] & 2) == 0) ||
+((A17[i] & 4) == 0)) THEN GOTO L53;
+LET V2 = A12[i];
+LET V30 = V30 - (A4[V2] - 1);
+FOR j = 0 TO 14;
+INTEGER V68 = 0;
+LET A16[j] = 0;
+LET V27 = 0;
+IF (j > 7) THEN GOTO L40;
+LET V27 = j * 8;
+LET V68 = 8;
+L40:
+IF (j != 8) THEN GOTO L41;
+LET V27 = 64;
+LET V68 = 5;
+L41:
+IF (j != 9) THEN GOTO L42;
+LET V27 = 69;
+LET V68 = 3;
+L42:
+IF (j != 10) THEN GOTO L43;
+LET V27 = 72;
+LET V68 = 3;
+L43:
+IF (j != 11) THEN GOTO L44;
+LET V27 = 75;
+LET V68 = 5;
+L44:
+IF (j != 12) THEN GOTO L45;
+LET V27 = 80;
+LET V68 = 3;
+L45:
+IF (j != 13) THEN GOTO L46;
+LET V27 = 83;
+LET V68 = 5;
+L46:
+IF (j != 14) THEN GOTO L47;
+LET V27 = 88;
+LET V68 = 1;
+L47:
+FOR k = 0 TO (V68 - 1);
+INTEGER V69 = 0;
+LET l = 0;
+IF (V2 != 8) THEN GOTO L48;
+IF ((k + V27) >= 57) THEN LET V69 = 1;
+IF ((k + V27) >= 83) THEN LET V69 = 3;
+L48:
+IF (V2 != 9) THEN GOTO L49;
+IF ((k + V27) >= 65) THEN LET V69 = 1;
+L49:
+IF (V2 != 10) THEN GOTO L50;
+IF ((k + V27) >= 73) THEN LET V69 = 1;
+L50:
+IF (V2 != 11) THEN GOTO L51;
+IF ((k + V27) >= 81) THEN LET V69 = 1;
+L51:
+LET l = 3 * (k + V27 + V69);
+IF (A31[l + V30]) THEN
+LET A16[j] = A16[j] | (1 << ((V68 - 1) - k));
+NEXT k;
+NEXT j;
+IF ((A16[0] != 65) &&
+(A16[1] != 76) &&
+(A16[2] != 84) &&
+(A16[3] != 69) &&
+(A16[4] != 82) &&
+(A16[5] != 65))
+THEN LET V42 = 2;
+IF (V42 != 0) THEN GOTO L53;
+LET V35 = ((A16[6] - 48) * 10) + (A16[7] - 48);
+LET V36 = A16[8] & 31;
+LET V27 = V53 * V54 * (V2 - 1);
+LET V40 = 0;
+IF ((V36 & 16) != 0) THEN LET V40 = 1;
+FOR j = 0 TO (V53 - 1);
+IF ((V35 != A11[V27]) ||
+(V36 != A11[V27 + 1])) THEN
+GOTO L52;
+LET V40 = 1;
+L52:
+LET V27 = V27 + V54;
+NEXT j;
+PRINT "Device #", V0 - i ," Silicon ID is ",
+CHR$(A16[0]), CHR$(A16[1]), CHR$(A16[2]), CHR$(A16[3]),
+CHR$(A16[4]), CHR$(A16[5]), CHR$(A16[6]), CHR$(A16[7]),
+"(", CHR$(((V36 >> 4) & 1) + 48), CHR$((V36 & 15) + 48), ")"
+;
+IF (!V40) THEN LET V42 = 3;
+L53:
+LET V30 = V30 - 1;
+NEXT i;
+RETURN;
+L70:
+LET A18[0..9] = A19[0..9];
+IF (V57) THEN GOTO L71;
+CALL L143;
+GOTO L72;
+L71:
+LET V57 = 0;
+CALL L143;
+LET V57 = 1;
+L72:
+WAIT 15 USEC;
+LET A18[0..9] = A20[0..9];
+CALL L143;
+IF (V34 == 0) THEN GOTO L73;
+DRSCAN V24, A29[0..(V24 - 1)], CAPTURE A31[V30..V31];
+GOTO L75;
+L73:
+IF (V72) THEN GOTO L74;
+DRSCAN V24, A29[0..(V24 - 1)], COMPARE A24[V30..V31],
+A30[0..(V24 - 1)], V40;
+IF (!V40) THEN LET V39 = 1;
+GOTO L75;
+L74:
+DRSCAN V24, A29[0..(V24 - 1)],
+COMPARE A30[0..(V24 - 1)], A30[0..(V24 - 1)],
+V40;
+IF (!V40) THEN LET V39 = 1;
+L75:
+RETURN;
+L76:
+LET V39 = 0;
+LET V40 = 1;
+IF (V49) THEN CALL L152;
+IF (V34 == 1) THEN GOTO L77;
+LET V30 = V15;
+LET V31 = V30 + (V24 - 1);
+GOTO L78;
+L77:
+LET V30 = 0;
+LET V31 = V24 - 1;
+L78:
+LET V28 = 0;
+IF ((V10 & 64512) == 1024) THEN GOTO L79;
+IF ((V10 & 64512) == 2048) THEN GOTO L86;
+GOTO L89;
+L79:
+IF (V29 == 0) THEN
+LET A19[0..9] = 042;
+IF (V29 == 1) THEN
+LET A19[0..9] = 03E;
+IF (V29 == 2) THEN
+LET A19[0..9] = 03E;
+IF ((V10 >= 1059) && (V10 <= 1172)) THEN
+LET V28 = 4;
+IF (V28 == 0) THEN GOTO L80;
+LET A18[0..9] = 396;
+CALL L143;
+DRSCAN V22, A27[0..(V22 - 1)];
+L80:
+FOR i = 0 TO V28;
+PUSH i;
+FOR j = 0 TO 4;
+IF (V10 > 1172) THEN GOTO L82;
+LET k = 10 * j;
+LET A20[0..9] = A36[k..(k + 9)];
+PUSH j;
+CALL L70;
+IF (V29 != 0) THEN GOTO L81;
+LET A19[0..9] = 03E;
+CALL L70;
+LET A19[0..9] = 042;
+L81:
+POP j;
+LET V30 = V30 + V24;
+LET V31 = V31 + V24;
+L82:
+IF (V10 < 1059) THEN GOTO L84;
+LET k = 10 * j;
+LET A20[0..9] = A37[k..(k + 9)];
+PUSH j;
+CALL L70;
+IF (V29 != 0) THEN GOTO L83;
+LET A19[0..9] = 03E;
+CALL L70;
+LET A19[0..9] = 042;
+L83:
+POP j;
+LET V30 = V30 + V24;
+LET V31 = V31 + V24;
+L84:
+NEXT j;
+IF (V28 == 0) THEN GOTO L85;
+LET A18[0..9] = 396;
+CALL L143;
+STATE DRSHIFT;
+STATE IDLE;
+L85:
+POP i;
+NEXT i;
+GOTO L92;
+L86:
+IF (V29 == 0) THEN
+LET A19[0..9] = 03A;
+IF (V29 == 1) THEN
+LET A19[0..9] = 036;
+IF (V29 == 2) THEN
+LET A19[0..9] = 036;
+FOR i = 0 TO (V33 - 1);
+LET V57 = 1;
+LET j = 10 * i;
+LET A20[0..9] = A38[j..(j + 9)];
+FOR j = 0 TO V1;
+IF (((A17[j] & 2) == 0) ||
+((A17[j] & 4) == 0)) THEN GOTO L87;
+LET V2 = A12[j];
+IF (i >= A7[V2]) THEN
+LET A17[j] = A17[j] | 8;
+L87:
+NEXT j;
+PUSH i;
+CALL L70;
+IF (V29 != 0) THEN GOTO L88;
+LET A19[0..9] = 036;
+LET V57 = 1;
+CALL L70;
+LET A19[0..9] = 03A;
+L88:
+POP i;
+LET V30 = V30 + V24;
+LET V31 = V31 + V24;
+NEXT i;
+GOTO L92;
+L89:
+IF (V29 == 0) THEN
+LET A19[0..9] = 04A;
+IF (V29 == 1) THEN
+LET A19[0..9] = 046;
+IF (V29 == 2) THEN
+LET A19[0..9] = 046;
+IF ((V10 & 64512) == 4096) THEN
+LET A20[0..9] = 032;
+IF ((V10 & 64512) == 8192) THEN
+LET A20[0..9] = 02E;
+IF (V10 != 8192) THEN GOTO L90;
+LET A18[0..9] = 04E;
+CALL L143;
+L90:
+CALL L70;
+IF (V29 != 0) THEN GOTO L91;
+LET A19[0..9] = 046;
+CALL L70;
+LET A19[0..9] = 04A;
+L91:
+LET V30 = V30 + V24;
+LET V31 = V31 + V24;
+L92:
+LET V15 = V30;
+IF (!V39) THEN GOTO L93;
+IF (V72) THEN LET V42 = 5;
+IF (!V72) THEN LET V42 = 6;
+L93:
+RETURN;
+L100:
+LET V31 = 0;
+LET A18[0..9] = 01E;
+CALL L143;
+IF (V11 == 0) THEN GOTO L101;
+IF (V11 == 1035) THEN GOTO L104;
+IF (V11 == 2069) THEN GOTO L107;
+IF ((V11 == 4097) || (V11 == 4869)) THEN GOTO L110;
+IF ((V11 == 8193) || (V11 == 8965)) THEN GOTO L113;
+STATE DRSHIFT;
+STATE IDLE;
+GOTO L117;
+L101:
+LET i = V11 - 0;
+FOR j = 0 TO V1;
+IF (((A17[j] & 2) == 0) ||
+((A17[j] & 4) == 0)) THEN GOTO L102;
+LET V31 = V31 + 790;
+LET A28[V31 - 0 - i] = 1;
+L102:
+LET V31 = V31 + 1;
+NEXT j;
+DRSCAN V31, A28[0..(V31 - 1)];
+LET V31 = 0;
+FOR j = 0 TO V1;
+IF (((A17[j] & 2) == 0) ||
+((A17[j] & 4) == 0)) THEN GOTO L103;
+LET V31 = V31 + 790;
+LET A28[V31 - 0 - i] = 0;
+L103:
+LET V31 = V31 + 1;
+NEXT j;
+GOTO L117;
+L104:
+LET i = V11 - 1035;
+FOR j = 0 TO V1;
+IF (((A17[j] & 2) == 0) ||
+((A17[j] & 4) == 0)) THEN GOTO L105;
+LET V31 = V31 + 790;
+LET A28[V31 - 619 - i] = 1;
+LET A28[V31 - 467 - i] = 1;
+LET A28[V31 - 315 - i] = 1;
+LET A28[V31 - 163 - i] = 1;
+LET A28[V31 - 11 - i] = 1;
+L105:
+LET V31 = V31 + 1;
+NEXT j;
+DRSCAN V17, A28[0..(V17 - 1)];
+LET V31 = 0;
+FOR j = 0 TO V1;
+IF (((A17[j] & 2) == 0) ||
+((A17[j] & 4) == 0)) THEN GOTO L106;
+LET V31 = V31 + 790;
+LET A28[V31 - 619 - i] = 0;
+LET A28[V31 - 467 - i] = 0;
+LET A28[V31 - 315 - i] = 0;
+LET A28[V31 - 163 - i] = 0;
+LET A28[V31 - 11 - i] = 0;
+L106:
+LET V31 = V31 + 1;
+NEXT j;
+GOTO L117;
+L107:
+LET i = V11 - 2069;
+FOR j = 0 TO V1;
+IF (((A17[j] & 2) == 0) ||
+((A17[j] & 4) == 0)) THEN GOTO L108;
+LET V31 = V31 + 790;
+LET A28[V31 - 765 - i] = 1;
+LET A28[V31 - 629 - i] = 1;
+LET A28[V31 - 613 - i] = 1;
+LET A28[V31 - 477 - i] = 1;
+LET A28[V31 - 461 - i] = 1;
+LET A28[V31 - 325 - i] = 1;
+LET A28[V31 - 309 - i] = 1;
+LET A28[V31 - 173 - i] = 1;
+LET A28[V31 - 157 - i] = 1;
+LET A28[V31 - 21 - i] = 1;
+L108:
+LET V31 = V31 + 1;
+NEXT j;
+DRSCAN V17, A28[0..(V17 - 1)];
+LET V31 = 0;
+FOR j = 0 TO V1;
+IF (((A17[j] & 2) == 0) ||
+((A17[j] & 4) == 0)) THEN GOTO L109;
+LET V31 = V31 + 790;
+LET A28[V31 - 765 - i] = 0;
+LET A28[V31 - 629 - i] = 0;
+LET A28[V31 - 613 - i] = 0;
+LET A28[V31 - 477 - i] = 0;
+LET A28[V31 - 461 - i] = 0;
+LET A28[V31 - 325 - i] = 0;
+LET A28[V31 - 309 - i] = 0;
+LET A28[V31 - 173 - i] = 0;
+LET A28[V31 - 157 - i] = 0;
+LET A28[V31 - 21 - i] = 0;
+L109:
+LET V31 = V31 + 1;
+NEXT j;
+GOTO L117;
+L110:
+LET i = V11 - 4097;
+FOR j = 0 TO V1;
+IF (((A17[j] & 2) == 0) ||
+((A17[j] & 4) == 0)) THEN GOTO L111;
+LET V31 = V31 + 790;
+LET A28[V31 - 1 - i] = 1;
+L111:
+LET V31 = V31 + 1;
+NEXT j;
+DRSCAN V17, A28[0..(V17 - 1)];
+LET V31 = 0;
+FOR j = 0 TO V1;
+IF (((A17[j] & 2) == 0) ||
+((A17[j] & 4) == 0)) THEN GOTO L112;
+LET V31 = V31 + 790;
+LET A28[V31 - 1 - i] = 0;
+L112:
+LET V31 = V31 + 1;
+NEXT j;
+GOTO L117;
+L113:
+IF (V11 == 8192) THEN GOTO L116;
+LET i = V11 - 8193;
+FOR j = 0 TO V1;
+IF (((A17[j] & 2) == 0) ||
+((A17[j] & 4) == 0)) THEN GOTO L114;
+LET V31 = V31 + 790;
+LET A28[V31 - 1 - i] = 1;
+L114:
+LET V31 = V31 + 1;
+NEXT j;
+DRSCAN V17, A28[0..(V17 - 1)];
+LET V31 = 0;
+FOR j = 0 TO V1;
+IF (((A17[j] & 2) == 0) ||
+((A17[j] & 4) == 0)) THEN GOTO L115;
+LET V31 = V31 + 790;
+LET A28[V31 - 1 - i] = 0;
+L115:
+LET V31 = V31 + 1;
+NEXT j;
+GOTO L117;
+L116:
+DRSCAN V17, A28[0..(V17 - 1)];
+L117:
+LET A18[0..9] = 392;
+CALL L143;
+LET V10 = V11;
+RETURN;
+L121:
+LET V30 = V14;
+IF (V49) THEN CALL L152;
+LET V31 = V30 + (V23 - 1);
+IF ((V10 & 64512) == 0) THEN GOTO L122;
+IF ((V10 & 64512) == 1024) THEN GOTO L123;
+IF ((V10 & 64512) == 2048) THEN GOTO L125;
+IF ((V10 & 64512) == 4096) THEN GOTO L127;
+IF ((V10 & 64512) == 8192) THEN GOTO L128;
+L122:
+LET A18[0..9] = 006;
+CALL L143;
+LET A18[0..9] = 00A;
+CALL L143;
+LET V56 = 1;
+WAIT (V37 * 100) USEC;
+LET A18[0..9] = 392;
+CALL L143;
+GOTO L130;
+L123:
+IF (V10 > 1172) THEN GOTO L124;
+FOR i = 0 TO 4;
+LET j = 10 * i;
+LET A18[0..9] = A34[j..(j + 9)];
+PUSH i;
+CALL L143;
+POP i;
+DRSCAN V23, A23[V30..V31];
+LET V30 = V30 + V23;
+LET V31 = V31 + V23;
+NEXT i;
+LET A18[0..9] = 006;
+CALL L143;
+LET A18[0..9] = 00A;
+CALL L143;
+LET V56 = 1;
+WAIT (V37 * 100) USEC;
+LET A18[0..9] = 392;
+CALL L143;
+L124:
+IF (V10 < 1059) THEN GOTO L130;
+FOR i = 0 TO 4;
+LET j = 10 * i;
+LET A18[0..9] = A35[j..(j + 9)];
+PUSH i;
+CALL L143;
+POP i;
+DRSCAN V23, A23[V30..V31];
+LET V30 = V30 + V23;
+LET V31 = V31 + V23;
+NEXT i;
+LET A18[0..9] = 006;
+CALL L143;
+LET A18[0..9] = 00A;
+CALL L143;
+LET V56 = 1;
+WAIT (V37 * 100) USEC;
+LET A18[0..9] = 392;
+CALL L143;
+GOTO L130;
+L125:
+FOR i = 0 TO (V33 - 1);
+LET j = 10 * i;
+LET A18[0..9] = A38[j..(j + 9)];
+LET V57 = 1;
+FOR j = 0 TO V1;
+IF (((A17[j] & 2) == 0) ||
+((A17[j] & 4) == 0)) THEN GOTO L126;
+LET V2 = A12[j];
+IF (i >= A7[V2]) THEN
+LET A17[j] = A17[j] | 8;
+L126:
+NEXT j;
+PUSH i;
+CALL L143;
+DRSCAN V23, A23[V30..V31];
+LET V30 = V30 + V23;
+LET V31 = V31 + V23;
+LET A18[0..9] = 006;
+CALL L143;
+LET A18[0..9] = 00A;
+CALL L143;
+LET V56 = 1;
+WAIT (V37 * 100) USEC;
+LET A18[0..9] = 392;
+CALL L143;
+POP i;
+NEXT i;
+GOTO L130;
+L127:
+LET A20[0..9] = 032;
+GOTO L129;
+L128:
+LET A20[0..9] = 02E;
+L129:
+LET A18[0..9] = A20[0..9];
+CALL L143;
+DRSCAN V23, A23[V30..V31];
+LET V30 = V30 + V23;
+LET V31 = V31 + V23;
+LET A18[0..9] = 006;
+CALL L143;
+LET A18[0..9] = 00A;
+CALL L143;
+LET V56 = 1;
+WAIT (V37 * 100) USEC;
+LET A18[0..9] = 392;
+CALL L143;
+L130:
+LET V14 = V30;
+RETURN;
+L131:
+IF (DO_SECURE == 0) THEN GOTO L136;
+CALL L19;
+FOR i = 0 TO V1;
+IF (((A17[i] & V4) == 0) ||
+((A17[i] & 4) == 0)) THEN GOTO L132;
+IF ((A17[i] & 16) == 0) THEN
+LET A17[i] = A17[i] & ~4;
+IF ((A17[i] & 16) != 0) THEN
+LET V73 = 1;
+L132:
+NEXT i;
+IF (!DO_SECURE_ALL && (V73 == 0)) THEN
+GOTO L136;
+IF (DO_SECURE_ALL && (V73 == 0)) THEN
+GOTO L133;
+LET V11 = 0;
+CALL L100;
+CALL L121;
+L133:
+IF (!DO_SECURE_ALL) THEN GOTO L136;
+IF (DO_SECURE_ALL && (V73 == 0)) THEN
+LET A18[0..9] = 3FF;
+CALL L143;
+CALL L19;
+LET V73 = 0;
+FOR i = 0 TO V1;
+IF (((A17[i] & V4) == 0) ||
+((A17[i] & 4) == 0)) THEN GOTO L135;
+IF ((A17[i] & 16) != 0) THEN GOTO L134;
+LET A17[i] = A17[i] | 16;
+LET V73 = 1;
+GOTO L135;
+L134:
+LET A17[i] = A17[i] & ~16;
+LET A17[i] = A17[i] & ~4;
+L135:
+NEXT i;
+IF (V73 == 0) THEN GOTO L136;
+LET V11 = 0;
+CALL L100;
+CALL L121;
+L136:
+LET V73 = 0;
+RETURN;
+L142:
+LET V32 = 8983;
+RETURN;
+L143:
+LET V27 = 0;
+IF (!V56) THEN GOTO L144;
+LET V56 = 0;
+LET V27 = 50;
+LET A32[0..49] = A29[0..49];
+L144:
+FOR i = 0 TO V1;
+IF ((A17[i] & 8) != 0) THEN GOTO L145;
+IF (((A17[i] & V4) != 0) &&
+((A17[i] & 4) != 0)) THEN GOTO L146;
+LET A32[V27..(V27 + (A25[i] - 1))] = A39[0..(A25[i] - 1)];
+LET V27 = V27 + A25[i];
+GOTO L147;
+L145:
+IF (!V57) THEN GOTO L146;
+LET A32[V27..(V27 + 9)] = 02A;
+LET V27 = V27 + 10;
+GOTO L147;
+L146:
+LET A32[V27..(V27 + 9)] = A18[0..9];
+LET V27 = V27 + 10;
+L147:
+NEXT i;
+IRSCAN V27, A32[0..(V27 - 1)];
+LET V57 = 0;
+WAIT 5 USEC;
+STATE IDLE;
+WAIT 3 CYCLES;
+RETURN;
+L152:
+LET V23 = 0;
+LET V24 = 0;
+FOR i = 0 TO V1;
+LET V25 = 1;
+LET V26 = 1;
+IF (((A17[i] & 2) == 0) ||
+((A17[i] & 4) == 0)) THEN GOTO L153;
+LET V2 = A12[i];
+IF (((V10 >= 1035) && (V10 <= 1197)) ||
+(V10 == 0)) THEN
+CALL L155;
+IF ((V10 >= 2069) && (V10 <= 2074)) THEN
+CALL L156;
+IF (((V10 >= 4097) && (V10 <= 4114)) ||
+((V10 >= 4869) && (V10 <= 4886))) THEN
+CALL L157;
+IF (((V10 >= 8192) && (V10 <= 8210)) ||
+((V10 >= 8965) && (V10 <= 8982))) THEN
+CALL L158;
+GOTO L154;
+L153:
+IF (V72) THEN LET A30[V24] = 0;
+L154:
+LET V23 = V23 + V25;
+LET V24 = V24 + V26;
+NEXT i;
+LET V49 = 0;
+RETURN;
+L155:
+LET V25 = A1[V2];
+LET V26 = A5[V2];
+RETURN;
+L156:
+LET V25 = A2[V2];
+LET V26 = V25;
+RETURN;
+L157:
+LET V25 = A3[V2];
+LET V26 = V25;
+RETURN;
+L158:
+LET V25 = A4[V2];
+LET V26 = V25;
+RETURN;
+' END OF FILE
+CRC 227B;

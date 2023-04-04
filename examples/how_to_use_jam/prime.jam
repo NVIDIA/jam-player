@@ -1,0 +1,26 @@
+'
+' Print out prime numbers
+'
+' Copyright (C) Altera Corporation 1997
+'
+
+print "Prime";
+
+integer i;
+integer j;
+integer s;
+integer num;
+integer max = 10000;
+boolean prime;
+
+for num = 3 to max;
+	let prime = 1;	' assume number is prime
+	let s = sqrt(num);
+	for i = 2 to s;
+		let j = num / i;
+		if ((i * j) == num) then let prime = 0;	' number is not prime
+		if (!prime) then let i = s;				' break out of loop
+	next i;
+	if (prime) then print num;
+next num;
+exit (0);

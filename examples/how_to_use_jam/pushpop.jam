@@ -1,0 +1,22 @@
+'
+' Push / Pop test
+'
+' Copyright (C) Altera Corporation 1997
+'
+
+PRINT "Pushpop";
+
+INTEGER a[14] = 0, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1;
+BOOLEAN b[14];
+INTEGER i;
+
+FOR i = 0 TO 13;
+	PUSH a[i];
+	POP b[13 - i];
+NEXT i;
+
+FOR i = 0 TO 13;
+	PRINT a[i], "..", b[i];
+NEXT i;
+
+EXIT 0;

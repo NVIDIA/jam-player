@@ -1,0 +1,67 @@
+'Initialize instruction and data arrays 
+BOOLEAN IDCODE_data[32*10];				'[IDCODE_LENGTH * MAX_NUM_DEVICES]
+BOOLEAN I_IDCODE[10] = BIN 1001101000;
+BOOLEAN ONES_DATA[10*32] = HEX FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;
+BOOLEAN tmp_ir[10*10];					'[IR_LENGTH * MAX_NUM_DEVICES]
+BOOLEAN read_data[10+1];  				'[MAX_NUM_DEVICES+1]
+
+INTEGER MAX_NUM_DEVICES = 10;
+INTEGER IR_LENGTH = 10;
+INTEGER IDCODE_LENGTH = 32;
+
+INTEGER i;
+INTEGER j;
+INTEGER number_of_chips;
+
+'*************************************************************
+'	MAIN
+'*************************************************************
+'Initialize devices
+IRSTOP IRPAUSE;
+DRSTOP DRPAUSE;
+STATE RESET;
+
+CALL COMPUTE_NUMBER_OF_CHIPS;
+
+'Assume all devices in chain are either MAX 7000S or MAX 9000
+FOR i=0 TO (number_of_chips-1);
+	FOR j=0 TO 9;
+		LET tmp_ir[(i*IR_LENGTH)+j] = I_IDCODE[j];
+	NEXT j;
+NEXT i;
+	
+IRSCAN (number_of_chips*IR_LENGTH), tmp_ir[0..((number_of_chips*IR_LENGTH)-1)];
+STATE IDLE;
+WAIT 5 USEC;
+WAIT 3 CYCLES;
+
+DRSCAN (number_of_chips*IDCODE_LENGTH),  ONES_DATA[0..((number_of_chips*IDCODE_LENGTH)-1)], CAPTURE IDCODE_data[0..((number_of_chips*IDCODE_LENGTH)-1)];
+PRINT "IDCODE:";
+FOR i=0 TO (number_of_chips-1);
+	PRINT "IDCODE for chip #", (number_of_chips-i);
+	FOR j=0 TO (IDCODE_LENGTH-1);
+		PRINT IDCODE_data[j];
+	NEXT j;
+NEXT i;
+
+EXIT 0;
+
+'*************************************************************
+'	BEGIN: COMPUTE_NUMBER_OF_CHIPS
+'*************************************************************
+COMPUTE_NUMBER_OF_CHIPS:
+	
+IRSCAN (IR_LENGTH*MAX_NUM_DEVICES), ONES_DATA[0..((IR_LENGTH*MAX_NUM_DEVICES)-1)];
+
+DRSCAN (MAX_NUM_DEVICES+1), ONES_DATA[0..MAX_NUM_DEVICES], CAPTURE read_data[0..MAX_NUM_DEVICES]; 
+FOR i=0 TO MAX_NUM_DEVICES;
+	IF(read_data[i] == 0) THEN
+		LET number_of_chips = number_of_chips + 1;
+NEXT i;
+
+RETURN;
+
+'*************************************************************
+'	END: COMPUTE_NUMBER_OF_CHIPS
+'*************************************************************
+
