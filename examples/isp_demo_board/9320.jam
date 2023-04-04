@@ -1,0 +1,1568 @@
+' Copyright (C) 1991-1997 Altera Corporation
+' Any megafunction design, and related net list (encrypted or decrypted),
+' support information, device programming or simulation file, and any other
+' associated documentation or information provided by Altera or a partner
+' under Altera's Megafunction Partnership Program may be used only to
+' program PLD devices (but not masked PLD devices) from Altera.  Any other
+' use of such megafunction design, net list, support information, device
+' programming or simulation file, or any other related documentation or
+' information is prohibited for any other purpose, including, but not
+' limited to modification, reverse engineering, de-compiling, or use with
+' any other silicon devices, unless such use is explicitly licensed under
+' a separate agreement with Altera or a megafunction partner.  Title to
+' the intellectual property, including patents, copyrights, trademarks,
+' trade secrets, or maskworks, embodied in any such megafunction design,
+' net list, support information, device programming or simulation file, or
+' any other related documentation or information provided by Altera or a
+' megafunction partner, remains with Altera, the megafunction partner, or
+' their respective licensors.  No other licenses, including any licenses
+' needed under any third party's intellectual property, are provided herein.
+
+NOTE CREATOR "POF to JAM converter Version 8.0 6/12/97";
+
+NOTE DEVICE "EPM9320";
+
+'Device #1: EPM9320 - c:\temp\newtop.pof Mon Aug 26 17:16:06 1996
+
+BOOLEAN A23[245208] = ACA
+xU700u@@@t@@@l@@t@f1_@t@z@_@x@@@EsW63omGCC2x1t@@@5_Wt@@@Khm_@@Vs
+smV@@V5K8b@SwSU83y@@lxt@@_hCOuCm@@xl@_@@boWsa1l@@@lM2_@@@yVltp@@
+@tlt@@wnW@@@xSB1@@@xwz_@zt@@xV@tVzOm@VlVRoG7oWz@@@znWUzXdqZbtWZL
+Y6c7Nm4y@@VRl@@l6wHHoWiK2_@@@sWCuVl@t@@@l@txT@_ltlm7y@xzwUlt@hyW
+@x@UU@t@DH3S@@xbbIeiQmpqWiP2U@@@Vh6COJuoQGnq0@txzzA3geCioOm@@@kU
+@tV@@UlhC6cfd4LD8vYHTTl4_3_@Vlj@@zx_@tp@zUVYqWeF6yx@@@qPW@xzUUlt
+@@R6SUbGIe1@W6SnOGKW1U@txx2Dm@l@h@@UFltx@yUltrxzUxltxjHm0_@t@_zU
+lj@x@w@l@tx@Ullt@TzVltsx@VTltxxzUlV1eWjW4y@@@x@_ldt@zkUl@xq73yUl
+tpxzU@3m0@x@__l@xv@VlhtxzsU@tlx@UF@txz_Ultrxz_RltxFFm0_ltxx36uUl
+@Fo81@zV@_@xzk4C8jm0@@@_V09Ol@xDym0Vl@xr79iKOGoW1x364knWtxzU_@tx
+_z_@pIUOG8XGL3i@x@xVltp@@Vl@@x@aX4ENDG@txl@Vl@443uzU@htx@s_ltRan
+3_t@@y_l@7oKX@Vlt833y@_@x@@zsUlth@z_@Gc4y@xzw_l@px@_@Od1_@zV7TCm
+@xzl@@tR@z@l986ambmaf19S6KkamUZ1_@@_tWCmt@zV273XC6ieamR03f0K45WI
+eWALF6mxzV@0oWC7669KvTnWE93YbCOpu1xzU@_@@@YbImU@txPJ2@q6SiaGia4T
+I9COPmbb1U@@@3oCm@@thx@_l223ElCmz_lN2N2_xzV3oIGltxVDJ2DM6aDnG2d1
+nDFa_mmFp37k6a_WH@36y@@Vlu9Xq76acnWeF6S5v1@Vltsx@VprO0l@@zN8XOl@
+x@VJ2HVOuCa1s@zVphOMM2me@w@hMx@lq83_@_@z@@rx@@NIhrQDzN@Vz@@@_@@@
+r@@@xz@hs@@@l@@NBhrQjyNxrqwFmpxzUFxc1_@h@qQDGVrq0@z@lxADmt@@lV@@
+V@@_l_@@@zw@NNuq0@@@lB@IG@7yl1@@V@@rVQfN@@4Qmgp4y@@lw@@@s_lslhzU
+lGT6u@3_t@ls@xm46SQW@@VVl_@r_@@@zx@w7PuXad64Pm3jMh1qUjMz@zU7PW1r
+Vz@H6yeag1H6ImVmtl@@Vm83aetx@0@@@l@@@@83IKam0@@@lEG@r3PaW@@@7uV@
+@XC89oW4XCCm@@VGaXMoSOGa1IyVm@7POZG6I4Bf2@@x@__@tz_@N7BXX83vahmW
+iA64Pm3x@QznII8aHBnImOGi1H6U88p3nI298Z4Eu@@ZbWKGcJYCiX@@@1_@@N1P
+K9aHBHVI8oWMHVI8o0ChaJ8omL7pJ8MY7EGhrYC4Yx@@@mIRKZnWG6ov@x@tt@ll
+xVvVNz@@HVOmzUF6sxzq0P6mlMgFUL2_zq@3POZl5l@Q@I8M29y@@laPZ1_@Znzu
+@77aXAQjM8Y_W1l@zqXb8XUl_@0Pamrt@VWCLu_@@FMY7Cw@@0@l_B273y@@VvRx
+_F83Ryx@oRv@BD27CKhKw7aX76ZzUKy@@7Xp3w@NZ3zv1@@@B_@o@3oGY83U8qdA
+WnOCAsx@FU562P84@H@@X_y0ArVzWCymxzQVeFFu@@stlrVVCHa4MYJaVv@Z9AaD
+ADmB@VTmI6OfMh5@QlMG6685Z@F833qIzN6iq6XCWHeFOu@@V9a192o8XGV29GJ3
+S@@@x@o@t@BrgQCM@mIymUlNRmIL4oWSHHnGUd645L2MgrI3lo0@l@@_V@@3z91Q
+jKhAbVfjMg@xIl73JnOSuL6mlMhtr@@l@@d@mhUm@@@QWCsub@@ttR@g_j4ZWCa8
+q7O2PO3_hrQQr@xvzUl6UL5XCKa@@FBhxQ@X_0Z@@@n8SUm@BrI8394i43_NhbqI
+fyJwrQr@NwjnKlt9NDmN_rYolyV@@@@s@@@e@l7lJg1_x@V3z1c1IJ8aX42an3@@
+@g1PuH83dezUlFU592z91t@xVn4nZiMdrWb2nFl_VaQ6G_r@F4k4ItrWGuIGAbQD
+vN@@mhg0@IlcK_@UUFrxHgzW@t@@GuImr@@lD@@@0POmt@@VmIIu@lyJBzo@li6u
+Vz@F4E6izhzxIltBkhDyVj_xrllEa1LYjpWWCUW@NwjrUltmImm@@xi@@@M_@@@H
+HbZ@xQTjs@r1av1jw@LjMz@nsTo6o64GM2qQfKKA@IPfKytbUA66ZnuOxOm@@_V8
+3Cu@BvFsE62P0ZW_Imt@tVWCCuBbVL@NYHO9Ru@@ht@l_TG6X4fc4UV0000GQ52N
+2yQlt3Pm3zy@@XmbZ@@VRxtQ@XmvX@r@@G6aOQk42Pe2tv_wE@Y@z@@@xVjKIAbo
+FjNhL@V956ZnO2P03@@@ps@@E2PWX0ommN_rIOY6u@lztzd@VWCda3c1s_@N3oeY
+m4nm@@Zk@V@RN@@_nFQGWC6uUjtBCnDylt@x@H@FOfM4rvVw@7@F_n4Srwh62d7_
+@VU2PeYW_2n@V18@VMhe1J06ZnOG69eLwbAyg4Imo0V@@VXmDZ@@V807Q@XNnG27
+6u@@@t@l6VZv64G6CH3_W@l_Ld_VlwJhr2Ji2LSz@raR0@@r_bkDmVt@R4dCCae1
+ns5oto64qN5Ujz_Zuy1@lphHSoW@@x@O4J8eFOYuK2@U@x1zbMjP64Ag1gr_Fu@@
+@FJX1nFwXFu@FHVlMH64Yx@000uz@C_dvZHb1@F00y0l@Z6a4@7_@ne_G6_64Zg4
+_72CiQZL7Zw3_h@@Px6@x@@@Zq@@V8SUerQjYshLgcbpxWNDmd@lNmI6u@@ltp@@
+NeF9u@@dW@@@lt@b@OKPm@@gLmh9u@@@r@@hVO994yA6wz_@q@zMxh@@FWC9yV@l
+gph@p@@A1lrVzeQPW@@@J@@@RC@@@z@lr6nfGKfwQRbMd9eR6u@UFdt@@LmhCm@F
+VNKjIm@E@l@Rj@u7vX@7@V@q@NHrA4t@v@_F@nZgb4_@@Uz@hlhwV@ttjsMWb4Ag
+Ms4a1gYu4Fk@zUTetxvh@Q55IzVSmOm@@RSG6U8YJvetx@G@p3jX_@Vl62@1P8a0
+PSIKjO8G6C47iGSz@VhU@@FKKm48Z72PG8_@l@j@x@7LhGy@f@ht@qAM2d4oWb2t
+56XC03@@@Fmx_@Tt@@7Ij7y@@@5kh78bIf4vC9y@l@7ID9yol@7ygJu@t@7ID6y@
+NAxbolC83su@t@FaQIe@@@d@@@V4E2nrx@TG68nl_@NDxC8a1TvB6zFa1IuV_FtV
+WxFsl@2@@@@_@VfeKAbYVfKAa1Cu@lyJAbVf@zltG6G2@@@RV_@@HEJ2@zxNy@@x
+3833XCuX0BLH83mmSn7SqvUm@vzV83CW@J@V8rsGzNtld@@F_@@VXb84@_@@Et@@
+3fc4_Fxtzv@i7a1Uy_@@tek4y@FJ7IDIiMhtoEltBwSFuVq@BiT6usl@tUV@@k@C
+ml_@VqvCWz@zV0o8nxtlVapQnr@zlFzyEwl_@gr_zc_d1Lvp0@Jx@nQ33@t@@npp
+0_hzAAThv3Rd4k_u@zt@@w_Vxt@hxVyyIG@@@lN@@Q@Vx@_@r@ZS69_t@l3fMB_z
+@@5IpwRz@hbz@@CUZ@@Wmv1m@@T@Vnts@@@TiKA52732oW41wB1@j4@k@xl3qt3U
+Bn@zz@@72dDy@N_@s83Sd@@7yg42om6_@@Z3lo3Mv@dzzo@7TEFy@x_xw@_DkBau
+tx@aj3WEnD_dmhmWh@VQsv3enQp3T@@t_lx@Dy3exf@@F8Sau@zW8yAIu@Fwt@W8
+W@@@V@0v@Xj33@@V@yUVjiMhLI8jNHf18NW_O8c860uZ_FGVI4UbDYENBn4HYQbP
+WV_@J0Ga_1wB1mBu3JypW0znWr@h@0om0I@@@GV0ZtzT@0znW@3qq0z9XIz@@0zb
+W@7Y0WFm@X_G5DMzty@jVZd73vwpWmsfImIQ9iTs4iaG2qdAQ@@@ZxIWXm1Z0zLX
+@r@zG6aJukI8GVXu@UTFyAv4IDIy@@_xt@_E83U4fcYygz@7Fl7yNBr6eley5@zh
+zx_FGVCe_@@t@zVVuLCm7O10X4Mhu79HmICmV@tRqWO8yAFu@10WFuzl@@@N_@@x
+_z@@3qd4_ztl3ia100y@3qd7XmPZZwbW7z@_epnWr@FV@dx@XNn0@VzxnTP3rVzz
+U_@@3Xp6HHp0@@h@_t@@Ts@@7skGYxI8_@x@3Jq3y@Rlj@@_FOF3YgL5_@VmyVxl
+7yA32X39yqFVz_t@7eF3yx_@7273Cz@v7BXA2qN2XNn0xN@xy@@@3X39_@z@hvd1
+_xt@f@w@hMx@r@@zjdlNJlz@@X_m3tr@@1oW4t@Hx_FyV3aH2Tzp0@FQ@_@m@z@@
+Tor@@FGVLu@@pszV_FU@@V@Rzx1Mw4@116Mjngzj@l7FF62fs3X9gqWNPJa1Mrlb
+slvlx@GgzW@vzSV1cxO@yB2w36Xjp0@v@k1zX4_@@pwy@@3qd4_ntlu@@l7qdD2a
+n9xzp0Q@VtnQx1@dp@1wp0@Fz@HrQ3rVTyXmXXeQjXVy@Vdv@@1wJ2@Vzv_yV63a
+1F_@P_lhN2nQR3N@@__@@ZZ3M5X_u1AU@@Xxw1N@@Nz5pWGgjHyyCmVq@VWCEn@_
+@VukOGjsJj@@bNF@@@HEB4VG@@n1Z4t@HTGmYk2tr3_VK7y3M@7elGy@@3x1mt9E
+Oau@@@rzGWHuka0zJ@K0ouHDI@Vmhg8kBFu@KTFc8vuroyFyARu@QDq@@@l@@V3j
+_B0Hgn0@@@1eUW@3Mo6HgH2@rArkw@@ZKp3_F0_Z3c4kKY@Zsd1el0Wotd1_hbMZ
+Ss9ol@@Z6a4k_7@z8045el4yt@@7eFCy@V@xt@@sB@Vj@@tNtxlMXY2ZmTfYz@@@
+GVKHeeUWolKcAzUluvLX@l@zGgbW@z@zGgzW@@@300Fmnew1@3@WUyxXu@ulxxf_
+84EUu@@@1_@@N8rU8c86u@hlFaQ9u@@ut@7yVW_am@V@70_@VtF41XmXaa_PG8SC
+8c89W_dvldV6uz@@t@@Vl@@@KLVz@XbO3rgdsHdB1@t@tXjpWuvn05dq7zzz@Xbu
+1nvd__@@@zhs@70G3SVB@x@R@tlx@L8rUmG4uVqvUmz@_l@t@@uv9X@l@@WmnWQD
+yT_@yRU_Z_zF8I4eF3y@NqRb@NAMRIu3s@FaQ6mOjNB0P9utJzsUVzdMhGg0zbWx
+@gEibzu1Xx1@lgZ_ji@z@@@ol@@t@@@l@@ZVL3q@M@@@m@N@5sk7yVup7sk7yL@t
+hwX_F0PFu@@@plGWHGuOWzd@V9OCm@@@1pvV_mT91C@@E@@@x_@wlr@@@7yA32aH
+5_FzVj@@@v@Vlt@qzh@p_x2vPWt_z@0zPWFT@V_@@@_@N@z@VVu@l_FmIFu@@@9S
+N6u@xxt_@@VWb89iTIOl@@VXV6u@@po_SVVW_UGEd@VW_Cmr@zVSmym@@nVOxCm@
+@NE@D_7p@x@_@@N3qd1k_@nz@@N6eF3y@@@5ygA2qd1_@Vx35b1n1BamszWQD_@W
+mzW@lXUFz@I1wJ2Vm@@XCOZ0zbWx@xUlzz@1wx1@@k@_jl@3qN2_@lwLcN@7w392
+tL2XmP6s__@U_z@3q73UkwPZEtFkVSZ32d4neY1@xVd6@@@3qt9Hdh2@@@l1wZ1@
+Nhb3_p0z@@SKw@@z@@Ix@@@5rN@lbQjMMf@w1wh2rAcsMfrk8ltxvzUltx@@El@@
+B_rIzky@@zly@5skJy@@@n__3o@x_lVs@huv5Yx@fV@FzH1833N_t@__oxe@w@hM
+p@t@@@l@@zV@xwj_@@@zJz@x@ZgtA@laMhLw0zbW_@@@0zn0lrUDbEwT1wp0zUv@
+sxh@2qd1U_u@3Rd4n1pWv_PW@@@Nwz@@7_p0Lu@@E@@@3Bn33@pW0zzWl@@Uyl@@
+1o03@@@@urPzZ9I21wZXOYaGee2XnltRyyC8GVCuVNlFc894eFCY923Xjp3nOy7w
+@UeDq@@727aSz7yxlelFiTdutl@F6LFatF32qN81PeYGHLX@t@@OK9X@l@xOx0JW
+_smc_@VW_Um@@@d@q@V@@VlH32Z0zbW7y@@0zrYl@@z0zP0xf@V@x@@yN@t35rI_
+fFZ3M23XYoZmTnW@7_@0z1JyZIG@ltUe@Cm@@60uP__0zzW@VzH@Vy@_@z@Tz@@P
+L@VFaQ94kB62fc1_@Fyz@V@xtxVt@@720__@0znWh@@F@ux@HH91lz@@Xm13@@_@
+w@@@3fc1wxQC2U56U@@@z10@7eF6Khzxu@@_E4E6uB@@FQGFe@@zs@@@jz_@Vl@@
+r_z@@zV@Q5tbDyx@@7U592i43Hdp0@@xd1wR3@_@@X_mc0zn0l@V_0zzW@@uVl@@
+RXjxX0oKX@@_t0znW@k@N@_@@1B9X0zbW@@tV@uy@npJ2z@z@new1lKUbnpp3@@p
+h18xXnsPW@@j4mxyz1wx1tBw@18xaO9OGisIm_@_VmII8oPFe_@@FGVF45b42tLB
+_Ur@ZSs3_@Z@zFAI6sE3y@tqRb@NAMRCu@tt7QdVH4EO8kB9u@@ztVVzdMhPgGgT
+ISNCm@@tlw3xVl@@@nTX1_N@v1Xh2Vz@zg@i@z@hz4RdAYEt3_l@@T@R@7fcDyzq
+@7Ja4YdN2k@@UTutxxh@Q5rM@Vis89ID9uFxRWt@FRCHC88S6u@lEtd@@VqvaGlt
+@h_@NRR@@@UjV@Z6K8_@@Vr@@tPg@@t@@Tj@@@Fr@_@n4XXWmzWQTMRhqwh1Bn0@
+@xly_@lyNhLIw@@t@tVLGuK1@zBb@@@V@v@NXNfY8ryW@hUA@@@h2t@@3MI5_ap@
+YdN2_@h@zFkkw@@@tlm_l@FaQNz@IHHH2lF00008jiMhrIEjNJfHTN8SCG@7@lz_
+wFjItL_@@@Xzx@7WC9YdN5_@lxLGx@Rq@@DAAaut@ld_l@l@VjdmsLXV@@VZGiy1
+wp0x@l@D_p0@8@xkx@@zVv@7eF6izvV5FF3m@Sl7vi4y@zQPjMhjJ264yA3uVU@R
+@@@3_@IjFg31U@@MUl@V3X336rXV2fc1_@v_y@V@7279uxt@7n930_U@7vi4I6G2
+1XB1@@@NM@r@Tz@@x@@zt@ltgxj_@msbWDyZFVix@_@@@z@lHxV_lFuLOuw@FDGV
+CuUhroQjMRW_Imrn@l7@hV@@t@_zs@fuz@ptEld@@_V8SImr@@buz_@WNP0@@@lG
+uiX@e@V7_@@1wp0zVjr938X0zbW@@MRlz@j_@@@zpU@xUNtBUULuhudt@tzVW_Um
+@_@k@0xVk@@5_@@@3wZ1uNAb2tr3IfyBzt@@6eF3S@@xBy@kFSNOm@@VVyV64el7
+yl@Vn@@@t@@@b@xxV@@@BXxY4V@@@1XxX@zbWN@V@uvzW@t@@WmPG8ryGzNllt@@
+@GgbWmzruGu8HW_CmV@@lx@@@0z9X@t_V@_lt_@@@Pzp@7sEI2fc11XZ1W@@100l
+@r@@qIi@@t@@6j@@@vW_OG8SUmr@@Dg@@RQjMhgr9jjMfnOUltpxzUl@@@H_ltN_
+hrgCr@@x@wVAGVRu@@FCaQCW_kKp@d@l@q@h0zzW@@_tuvzWx@iV@dzQ_@@NZsd1
+1wB1@t@@_@r@TzV@xVD@Y_h@Va6Im@@zf@@@V@P@@_@cgDx@B5l292MY1MhrA9ls
+herdjBmI6etx@s@VzdMfrQ@@@@y__@Zdt3Xm9XuvbG8SCm@@zlQh_Vx_@lw@h@2M
+I51wZ1@z@zi@w@z@hr7elAy@@@wMprFMRIWs@@F8SaOhxzE0PFu@@@EU56upiuFC
+H9uzVxlhV6Oc5@tV@@V0o298SR4elAy@b@w@@Vnpwlk@hrU@@@lv5o0@@@@_@dfZ
+Ss6_@5zZdd1MfqI3t53npp0@3_L1wp0@@Vw_suV2w33k_@@zVmd6TEdy@ZG0ZLRK
+r@zlFXak0POmezO8GVIiDA3YNn3Qz@B3Xp6Xjx1ly@rXjZabxbGW_CmslsFhnOCC
+6xf1wx1VC_Z_@q@3Rd7_@l@Zdt6_@vzYdd1qQjMv@zU7eFCS@@@7ce4YdN2P@pWu
+vfY@ZQTes@ryUltrxr@7FF9wwd11afY2aPGW_OWrolUA8C8eFmu@@@t@Ulj@Vz@0
+zXH8Sgmt@VVOYgGn@@VW_gm@@xd@Vzz8rKHW_ym7y@VW_89dO6uu@@N4y@V83o9G
+V9uzUjFGVOu@8vthTUTW_Uu0J944EI8jIfu@hzsOithZ@@@GgLX@@@PV@@dXY2ZW
+bmGqvO8a1Cu@lrsBjV9C6ZHfU@@np33Rt@hwzw@3i4CXN91rwlMMhr@Thtx5hjDy
+lr@x@G@FkBR4MYGyrwjg_hzsUlNRW_mm@@R7@VzvmsPGO9O8GVIG_b@FiTIOfMh5
+@IhaK_@sG6aW@@oFjK@r1XJba_PGW_IGAzoVm@C8fS94eF3ezhzxIC63JzUVyyUm
+7Z@KOxImh@VP83_X@NxTqvs8i42v@jMNhzVDltxr0z9XzVz@m4vH8389GV9uUl7B
+83Ru@l@tz@_Vukmmj@@V8rOedS64ygACcwz6ceM2UL8U@@g3XJ218B4@@@@__lz3
+a1F1wB1jtxzXK33@@@sX9IYeQ5IapO82764o0FYVa118h2@@z@nphYeFyWNx@QUF
+rx1PG2J@_@nzp0@@@gXxQcW_aGW_C8lR94o0CS@l@5w3U4z_eg@hzsQltRW_Um@V
+lUi4on@@FUyZOW@IjaKy@o0PuHW_U8oP94o0Cy@@V5w36y@@VPvNxtbUAMqvamdw
+@U0ooH@@@Y@lw@WmfY@@@R_@@l1oe5@@z_I@@@ZrM2_VxzrQ@NphzUFiTFu@@@Ao
+Pyayj42BXAH60cWmzWlt7LzVD56xzU3Ur6XKpcG6qIa14o_lslhrUl83Sh@@3_8d
+fIGugm@@@3y@@@83Of@@@W83ua@FMhukSIW_ym@@1ViT4A83h6oWPYCGck@3_zVm
+@7o0ZZbGo1oGkeFGI83YoxzUFltxV@@@@L0m0l@@@L0m0xzUlH@pWA0OGR@Cm@z@
+VK0CmU@th@z_le08nR0CmU@thxz_V@@xzD2m0xz@@_t@@w@d17spWdCPWltxV@_@
+@s@@_TltxNCA6Q@d1y@@@J6G2_l@xzzV@x@@zEA06u@U@FK06aC03yV@@dC0369W
+193mWN3OGo0Um@@lNp1Cmltxjz_@V@x@@N781xzV@J8mWa1mWt@@VVltx54m0@xz
+UP9OiW2a0@txTzUlt_xz@z@@@vzU@dt@@k_ltR@zUlk@xz2PW1w@_@z@xzw@ltlS
+19aRW4u@_lNp0CyUltpxzVNlt@zH0sml@@zj3Cmx@UV44ImzVldt@@U@l@@3HWXT
+4OWzU@@G1amG4Ieb0FCIWDY206wzVlZ209@28ao08p_5O8l2ZPltxrzVl@N6ImVl
+@lx@VFltxz7Gm0xz_l_@@@yUltpxz@tltxl@@ltO_PGa6Iuk39etx@Fa19uxz@Vn
+36Kz03uzV@@bX4Myd1w@U@jt@@x_@tBX36axF3y@@xxzVld@@zVG6Cm@@@lt@@U@
+l@x9SmWm6PWlt@@4EmW@txzQGOGa1Umz_@Ni4mei2C4Q13_em3nI8XQBaGi4I8J4
+6u@Uld@xzVq7Cm@U@NB1I8J49u@@UN@txjz_@tlHOGq7Oe@V6a929Y_G2RamWi4m
+GciC8B1FSzh4y@z_7oC6k4d1vMYXczbW@txVz_@t_@@@JBW1j1uXZKamS0am@@VF
+@tx@V0ind@Cm_@@hx@UV@t@@y@@t7xN2l18ae0WIe0WAe0aC4g4oOX1BAmW0PWno
+@Cmx@@VWCCO9RC483Cy_ltxxz@FG69Sc0IIg13bQ8Xw6KH61Cm@@@xA3Ce92IKqW
+JE7m3nEmL@@@lHXBX83SY@@z@bHOGH26s@@zh@k@V_@lx_l@@rz@xx@V@tz@Vd@@
+xVz@@@y@wxBmd1_x@@z@@_xz@zt@@@l@@tN@l@@XlnWABOGrFC8U2FO@@@t@t@@s
+5Im@@_l@wdF@txy_V@zz@@zhVtTFYS6OtT@t@@@ll@lTkx_@_@@@y@jxQt@@lE09
+m@@@N@@@l@t@V@x@@U@@_z@t@R@@@r@@@l@_@zT0O0@T@Ut@xxU@y@y@@@x@V@rl
+@@lxV_R@@l@yl@lvpV@xzztt@@zF_x@tEwnW@_xV@@@@y@@@uh@@wV_wtV@dFz@t
+VxV@@w@yrz@_txz@@NZ@th@@wxTkPW@xxV@tR@_@@lTV@@xVx@tV@@jx@@VR@@@P
+yB1_l@@_x@zv@@@R__@t@zxlwxVV@j@_k@VxT@@@hz@@s@R@j@TVV@bp@_@V@v@_
+@h@@ys@@ll_VxV@Nt@k@z@zx@@x__@_UT6u_@_t_@@l@ltV@_@@_R@@Tz@@x@t@t
+@@@hzl@V@T@x_@Vtzz@@hx_@t@x_d@@lBvx@@5zp0x@@xyx_yz@zlzY03yl@@xt@
+zVW19qxF3S@@z7433yz@@xVV@@AVC4Uj4UT16w@@y3Zd1dYu1xl@zy@@@z@@lx@t
+l@w5OyC29I913DSeYRI8Hg0sesV9u@@pFP0LaN03IEW4l0eYBQeYssss30CWsssM
+zljz_VR@z@ssxlzztVRRRC0CGR@@@V0iHRRVhssss8LWt6DUOc73Fr39izljPRRR
+p@tsVQzOmtsssf3CeR2I4zZ7AUG2_ts_zlj@xVRxtt__lljjjF8OWj@@@6XKqXI2
+fwUCCeaqMLZ1_x@@l5o3_Vx@JS2FUx@@J80CDLmxHiyM0Cmep9yyQ53y@@tVQXJU
+mo3dq81zl@@lD9aK@PGaOOemV64CZAYtmFfKeH@RRRDqm0Rx@Vss@@iz@lPx@@Bu
+46ORRRpss_V5Rym@s_djjjDx@@Rs_@@ZlK2_@@tp3W1s@s@hsm@nqHB@ljjQRRRr
+_tsgjz@NRx@ls_@Njz@@QxVR@SG2@1ud2_42;
+
+BOOLEAN A24[214488] = ACA
+xY600u@t@tkV@l@@@@41_@@@z@z@x@@zt@@@lV@@V@@@@_x@@snmK6yt@Qw@xVpV
+@_j@zzV@5_y_@tly@@mvr@_td_@l@_@Nlz@@y@l@z@@@x@t@t@@@Nd6u@@@uQ3yv
+@Qwlx@tp@ei@z@V0_@@UleVTp@mxzxlt@U@hl@zJ@7w@y@@vz@@e3@@XVX6ul@_d
+@@@V5nm@@@l@@tHr4xx_@@zvV0@vp@Vtl@yl0a_VQW0G0uj1fja4OG0120@N48l1
+0G_QP0eY802@b08W3mVT000q5004md0uF2KHalv@@1Zy1ydF1uT@wmT2up@LEX08
+IGuN9efl0_xJ@3WkU0v08DKQuV1_nJ3ei@TxV0000UlWlSp@GwL000000m2KG5e0
+0000002WW00040004460I0A300000uh40480_xZ@1Wk00G0U040u0WZ2I41o_yJG
+01E0G0eF1G02000_N0@0000uVtyF000000mN0yF81G30000EO0bl630G10u600mh
+QyV69HU8181u@oc1x@@@rU2_@t@pz7y_@zx@@@t_@@h@s@T@@x@HXAylc@x@@Vp@
+@_ll7GV@@t_Az@@yFWYw@@VtR@@l2_@V@z_@NI3ys@@7FEX6@@l@UxV@_@t6Gx@z
+r_5w@t_7WWql@VF90yV1_7W@yy@tu@UVLQ@lM7rWeg1_@_zlf6yMJG@@@@ADXCh1
+_@@zz@ltR@t@tl@@NKeY833kV@Iz@V@30n@t@l@c@@l8@@V@Hc4wlC4Fsm@@fHa9
+1Q@@rslm@zs@00i_@tx91W@BwV0q@pH63y@R@ylIuQRGa91@@@l_x@kduCuNt@Fo
+OWVl@@833H16y@@Qw@V@FoaW@Bz@8J2_lW@yVtl7oI8USY@ruV@_tRXC6u@h@FoW
+15y70w_v@3PCmR@_@B86_@t@M2PO0q0@_@@s@@@p0D8AeYG66ys@@hq@tp@0Ak@@
+@TFz@@Aul@Z3I8aXXu1FYbOmt@Ne@VxV02M@nI6uF0_FaXXIJ62oO8MYXef4y@@x
+x@@@BomWeWA2oOmV@NQGM2nIFKf_Gy061PF4POGGc1nIC4oKHXh1dBCS3mG8J2H1
+L4zn0z@@@836yUH@7vaGqt3n3R4znG8Z1HV6890UNH@3G8J2nIR4PKH8Z1nIC4P4
+Iia1H6a4FKHi46H6X4fRG8Z4DW64abGKm3Py64lcWVl@xG63y@V@5PSIyG5XCIuj
+@0CoW7_@@lRNzG8ZDy_@lx@@@N@_@l@@xVj@@@_@z@V4QGi49us@0Iyv@txlDl@B
+w@iW6u@@JBG63rXCm@x@@X83Ct@@FzA1fz@@XCgG_@@UyA3Yb8X@@@7@@@@sz@@z
+v@@7moWVZOOd@@t@@_k@@@V@@@w19P8a13__t@zz0wx@@tDMY1w@@tzsV@7anWta
+64av1x_@@nlIuLv3HuOmtxMOOf4YCuHEJCy@@QtmpWuL64PmWTJF4wJY8364an0p
+zVH_7u@z_@t4oGYu1Cu@P_t@@3S83CYCiH@Y7cbuX_@@V@lp@1POeiQ2kr@@Z9QW
+@l@@mIC4an0l@slnII8ce1n3En@Qylx@xjWCI4B1ZTgUu@@@d_@@V8Z42oOWT@@V
+@@_@__@sYnnGyg7Kw@l5Xp0lDp@XCC8Of4rwCumh1_@@92POGOfGYC4IyNCy@@_x
+@_@t@VlV8ZA2BzG839yz@558h2@@p@XCy8i46HVmuwY4Jchm@R@VIP3y@csv@@Vt
+Ul@l_@z@8SUGi@@txlCX@BwtG66u@t@FGs66u@@3PyGia4i@t@7oeb2SO4JCXG6j
+uF01t@@@EqU@@G6auVx@FaXG15huUU2_x_@z@@@x@@NEDk1_@@5vt@@xzzkt@Dzl
+@@@zii6u@x@dc@zV8ZAi@@55DB1fz@RJrgmz@@l@d@@jx6uk@@FGs3XCmGjlcM83
+Iy@T@lSrWgw64om6l3szHuC87i1XCYoP@_Vbl42PWXl@@V@@z@y@@@RSp03x@@_@
+@Mz@@@xNplt@@lts89uV@@t@@pVmIO4fc1nhinrW6iN23__@@zF@@7MIE1PymYX6
+e@@@FaX4y@l@7ia1b6oGsX6u@F@Fi4908O@x@t3BM23y_@@x@F@t@@pMO9OqJu3X
+bG2UVDD@pmlXC8HPNF4oW1XNnWz@@Vl@@@_VGny@@lBl_@VlH3y@@_w@@@d@@hPS
+NI0ix@txfDGWC9up@@FygD4m@@78J2_@V@3aP35zB0nTjX@5u@POgeNI32XB1@@@
+W1o8H83LO005t@@@Epw@@0oOWR@@@uAIyWM5XmzW@VRWWbUm@S_gq_tXOxUu8H3Y
+YY1@@ltXC8X@R@VKzVW_hx@z_U_@l63y@@@Z9w1@dr@0Kilz@xl8W@BAq73y@l@7
+PG5fSQW@1u@WbC8o0C2PG2P_QQ_ljVRxy1@xz@1oSY@@@V_z@@XlamxN64aX4yxV
+01EQ@xzqyFkh4yz@@x@s_VB89y@@g5Qn3HV8X2@tDx38O1P8H83Iu@p@FfK3y@B@
+72t6JlOW9@@@E5J8VG3YjJ2d1eu_Vwtz60@hW@1m@F_VCC64Rd4_@i@z@@37oW10
+u@l3833@@sv04i_Dux955L8qx@@VLBXEKa8Cn46xYXsoC8elAy@Vx3Gn@txl@MyA
+6uz@@DeFCa@@@@S839KQG4d64Qc1X9QWt_4m0BDm@5yV4E9u@n_DygGYQrWcHJ8_
+H9scb1lzlc1oSIqMduVDkFyALo2XXyDPm@@@l@@FOo@@@_Fx@zVV@x@@7DQm4y@@
+jVsm32t_@z@@GwVDxp@@@cH@z@m4JGt0Ak@@_z8SIm@X@VWC64AW1n3mG8FC45W1
+_d@@fH@@xlt6Dmo4y@RT1GmwttldKiT98SQVLQ@3WV@@Vjyx@_@d@3XB1@@t5Htb
+WY_@@t_CGtF@@al64nf1_lz@R0AXWbCm@@@F@@zV@@@@qy@kypR@xd@@s0w@l@@j
+K@@t@0Gq@ZVq0VzVNU@@@z@d@w@@VJ3@@VmMLSzN25xPW@@KZGHJ8YJ3ys@00e_@
+Fel7y@3@sCi4_S@@z@@@x@W@tN@@x4Y9ul@@tt@yViTI4KO2r_PWF@KpOKJW_@@V
+Kj6Gu@@Fc89y@@z4qt3_xp@3Hs0@@VNp8RW@@dVjfn@wxdt2wZX0BJGH@1WkU_@0
+PCmRV_@8Sd4O961P0M8SvCIJ2Uu@@Lm@@x@@bF833YCO3@V@dtXPW@Xy@8Enm@lN
+W@@lBF_@@_@@@3MYX0Gbml@@lk_y@hgD8AgDyU1@3WkUq@tyVG66a6J2PCSIKj9q
+g73XbyWtk@tGHVmxl1W@BwV0y@xXY6IWC64Zw6k7GmYVi2@w@@FTpW@tx@PkV8i4
+3EsDXuLm8a1CiFWY7tb4XC8HC2L4tb41oaG4d94oG2_lk@BVCaMdJ8EO60_@@x@a
+_FiQ62an0z@s@HrcWV@xV02_@_@zay@@5vz@@FeF6wyzX0Pmm@@FNOYdKIk1rqYH
+G6Cu@@@E0P9AHsWWCUG@VFGKjFu@YyFaXAI7JYG6y8Kq72o81@@VUvPp0@_@@ntn
+G_@@l@t@Vx@@t_@@tz7V@3GmxFQ13q@@@7XO2_Np@zV_lv@VVtt3elh@@Vb_lL_7
+Gmrz@lBf@@NHd@VOYCKDl1U@@@z@z@x@@@TOm722d1zzs@HEdW@Tx@OKnm@M@VLm
+9u@@VDa1Cy@@N7om3NtRG83Iuwt_tlV_j1qd@0aD0WYhQGu6Ot@@F836y@s@NGk1
+5rdGBP6uVV@F836y@@J5o09_tz@zx@tFj@3R0oWT_@V@@@@Uw@@3M2ZU@Om@@hPm
+w94vS24y@z3wZ1@@x@_@jsz@@@xt@lDxVF4583w2a1Buo0lhn@_@dtYSc4I2W@Lq
+t04hj7g953_l@@Dv@l79i4IR73_v@@YYo6__@Vz@@@xJDvt@@_MapUm@@zkt_@V5
+zr@HP91lzr@_x@@pHn3hPnWkxPGqJCm@@tHCgs88SC4wZ72om6s@@@7DK2_lz@vt
+@0w@_@tx@@VinC80T6u@t_dc3@l@VRiOjbW@zxF0AU@_yzt2JK2Yw@@z@VlrK13_
+IN2_@V@zt@@7q06y@z@x@@@p@@hXl@@FlT_lHdB1kb7Wn1Z1@VpywzrqytR@wVF@
+t@@VQu@Im@ll@J@Umeo@l@@9xp@PWL_@@msnWVN_@00cW@Bs_mhO0__@Vlzxl1XB
+1@rFW4@lrYVK23Sm0@ps@_lj@N2c1d@B1@@lxMw@@3zN2Iw@@z@@yxVDUt@@zcT_
+z@msnW_N_z8dbWRQYsmhmG_@Im@F_X9_@V@@@@_@Xdo@N2_@@dy@@V55b4Ydd1jN
+A1V@@@_y@@ZlW1_Kp@rnFl5U53YEd1k7013qd1Auh@z@Z@FdF3yM3@x@E_TqRFin
+63y@lV5pc4y@@DGZ@x883F000wFGV6uB0_tZ@VJW_Cm7@@lj@@@9EnWy_@V@Vo@X
+_W1l_@@o_@@zFw@x@@@o@@llt@@V@@y@_l@@z@@B5wZ7yFajJp@Lt@lzlF@@R3e@
+@_@@2z@Vv3Gn@tGl@MeFaWw@@l@@w@GumW@7w@GV8X@L@Flz@71wB1lrFW0h@X2z
+n3_7WMRqc7XN1cmsXHmIMAyAmCIFCi@t@7U59YdN8nT1lVbWHW_a84E94oWPwXd4
+XNH2@l_VHLmWGgvnCpCeNRaaF932oW1nIu4@Nu@HgH8_@tR_@d@ZrM8_@@_y@8@N
+nl4yVX@7I66y@@1Vsl4qz@Z6el4yt@17E93YqL22@@t3Ja1_l_tCwlhxx1qsr@@l
+I@@F50eu_Vutzs@@heo@FA094eF3Y643_lW@35W1H3YX0zPWkURq0zbWVVBC02M@
+6_za2qN22ltNbs@lvt@lt@w@VGjOeyMFu@@bt@@@ji@@@m_PWk@V@ukym1wC84EC
+Oxt_tlV@j1qt@OjPGSNI8uM642d4yVz@xx@@r@@@D_@@@mh8a@@@x8TmGuLCOaVC
+Oz@@jLT9Osl@FiT6uz@zo@@@l_@_@G@bW@J@V@@@@UxTD3Rt3exV09Utt6279y@n
+@@yE663M2Xm91tz@@_@l@zl6_7B162lY1wV@t3qN2kvtU3qd1_U@@J8X110q0ltt
+@_@@dJp73a@z@zNs@x@tHt@@@d@_@@uvPW@@t@hrbm1@CmNs@l@@7IzhvV_@@tCt
+l@7w36uwtl7vi4k_Z11Mo0@ltVvzZ1@h_VHQw1@p@@qu@rztRx5zXDqDjl68332J
+qInhebuQGIWCqAo085@ee2XZADdpWGuOW@uwV@3Ut_@@ay@@Df_@@F6V64eF3y@q
+lv@V7tt3elZ_@Vb_BKnn915r_@1wZXD9PG8S89UUCuNt_FGVOqSE6sA56buAXmIm
+W@zvV@@@@Xb8X0znWVxyxGua005VbepP0T@@@0zzW@@lN@@@@Xb81hz@@Xmv1@@l
+6_@@iYEt91MIYBrnmezC80W6O_@@FuL94wZ7Y@b1UxVDDx@@7O96ytV0Iy@lFiT9
+SOF3yxR@@rk7cmc4npZ1t@x@npB1x18Ow@_t3qN2kP@U3qd1U@@@phZ1fJBX3dnW
+@@lfmTPW@z@@z_OGW_C8yAIuKx@t@@3f@ryD@@@RMvt@3833_VvtZdN2vto0iz@@
+yx@@3t53_F@@z@@Btvl4y@@X6kB3e1d@xltMDGV94U532833AbsNbsF04WiDEfN2
+t3o0@h_@n4nWJt9n0@O8c8OiiA3YHb1LypWukymR@OO9Q9u@@rm@g@NmIg8oP94e
+F3y@@9ut@@t7@VW@@@@nWPGaQCm@@@KkWCObU6uf@_tN@yl@@xVlj@x_@p@zy@@7
+f66kvZ1_z@@zVdQuV4_nR@@X@VQ0w@@5_lq@zt@04f632wZ1n1B1@zV7Lzn0@@@@
+kv@@3t53_w@@p6d1Hg91@@p@UQ0jz@5@7f66KqN0u@d@tD@tfNJxVlzm@DYoZxvz
+W@l@Vx@@R_@@tz@w@xVm@t@@dG8rUG@Q_VW_OGf@@c714yeBPG8ryO9U6aYC92tr
+9Uz@@zVG@RW@@p@@@lD_@V@@@7ox@@T@9@FOl4yVmoxt@@Ns@@l__FQ@Bw@_x@zz
+l_@7a13y@vADTl42fc1y7otfPV@Bwt6rltzj1qND@@Vf_Vly1eud7273yx@@7ID6
+yVq@Rq@lxfT6u@@tN_@@lp7w@vybG8rIG@@7Le0CWsgzj@ByVgrFW0hyXYdN2XKp
+0@3Gl_@z@z@@dwt@ls@@@lxtz@9gPWp@@V@t@x10q0Zz@@zg81Z@@@_V@@z@t@7M
+23Ica1t_p0@7x@1Xp0p@@@UxsVy@J34MY48_@Z7Tk4Yfa1_@j@zlz@bbk4yx_@Ft
+F3C_@@x@t@FtR6C2A3yl6U7M23yq0Qx@F@Di46e@nVFUU9ucTxDCH6m@M_t@xzd@
+Vv7@@@7_@@@zV@VVrF38m7@x@A_t@@tPGuCmVT@LXcCm_@@lV@zzCzPGetImd@@l
+tj@V@@7a_NZ@qn@lPzV@tt3el@lONb_@Vo70nz@tl7Wi4yVz@x@@@7R@@dNwyV@V
+s@_@j@z@@tvt@@t@z@t1@Cm@@_l@@xJ@@@K_@@@zB@@JZtxmVljIW_CmLxNe@VhV
+00M@_wza2GM2AYsNbs@0ut@zt@@zlz@@lmTbG3kIeMU6u@U@@wV6m@@xt@x@lt@V
+V@V@@_lz@z@@06xF3yVJtx@@Vt@@tRukCWcl@leVxN@_st6G@p3tb11o8Xe0OWt_
+@@uvPW@Z_Vt@@xbzpW6xPmfRO8gV64yA3ysx@w_l7Ws@zj@ByNlrFWnpp0@Nqh0u
+@dz@Dt7el4qy@@V@692tb4_V_@3553n1BXAzPW@@s_0BbWtsxN@_z0q7@@3ia10@
+@lyUI@7a13y@@Tw@t@FaQ6u@@tt@@_l@@7@nNKX_@@@WNbWz_z@mhuH8rCm@@zl@
+Fx@plOGBnU83UCu@@@DgJ6ux@Rt@@tV83I8KV6uz@@t@@@c@ruV@@@Rs@t@ZNH2w
+7Gn3q73DAp0lz@VR@p0@@t@r@pWEazG83OmVlzRW_Cmr@NOyZC8GVCuzUVLQ@@cV
+@t@ctbmmgIOvVCu@VbF836abF3y@Vx7Tk4Agr31Pm0Q_@@_@j@YEt31wZ1V@@@_@
+VskRN2U@@@3KW1btwXdxPGeeCmR@@h@VQ0Q@@7HdpW0znW@lvl0zPW@@l7@_@@_@
+@dzt@@xcT@t@@@lVsyV@@@@_tv@zs@T5rl4yrV@7sk4y@l@7FF6qs@@7Al4ys@Q4
+0A3y@J3G@@@BiT64eF3yVHV7eF3y@@@x@twkL464@F3Stl@x@@@tV@_VH@Cmt@tL
+j_ImxQyVOxCmN3ej@lQt0zbWa0uT5zF0_xv@3tL2_@z@z@@@u@R_zjN9yZ034p@V
+7@A38@@@x@iVt@@@bV@tV@@@Rs@@V3qd1_@x@l5d11wp0@R@@_tV8Zd73_@oTLw@
+@vV04EiT6ee@_FEO9WjV_p@z@Rb_C8U564nl4y_@@bwl4yF@@HZ@@nFlzlV@@P3e
+z@_y@2Z363_3Wk32N2vxBXOYamSwOG1@@l@d@xzmnW@VRV@@@d1wJ2@@V@F_p0Qy
+@@_@j@3oG21wB10yUH_7Wky_@@R@F@F8394J46k@d1_7Wtz@@0eh@@@HO64el4Y9
+I21wB1lNq@0ehdZ9Y11wJYuXPmPKm8GVCez@@lmP9ayB3YHL2UxxV3qN2_hR03o0
+3np3ZmZPG9qO8UUOeB01B83C4ZA6sJp3F@ZXp@bW@@NV@@@xH3AXQq9Xx@@@0zbG
+SmOm@0Ak@V@z0zbmX_C8GV6u@V@xwJF4el4YkN21wpWGHzWtVFf0zzWM@@z548H0
+0Pm@@9VmICW@z@VeeIOKH6aUF6gAd1_7ot35L5nQZX0zPGJxg8HVCiFE3m@@QmVr
+@BKKF4@e72qN22_@tBpM27@ZX7pP0V_@V@xn@_@@@z@q@xz@@F4E9uU0@Fy36405
+3y@7@xz@@nR@hff@V_0UO0zNxV@Nw@_xT03tb1_leV1m@l75W4yl@@B_@@t@tz@c
+_CelV6u@@@50@@lV1uV@@@@_u@@z@F@xVDUt@JzcR@zUVFWsUxx@Lu@lvS01Ba1C
+ucFwrhfzZt_zVV@@Vv_pW9KaG00Pm@@7SW_Cm@l@l_@@li0OGqtC8KK9yvF34kz@
+7ID3yVtlPkV@BGV9uV01t@l@USNI8yA9el@@E8SC4mZ72lI2qu@@rtRxvtV@s0Qp
+VW_U8yACut@@VzM9KHcAM1N21wpWs@PW@V@tOKPG0POmVl@VOxCGtlzlV@vR3eV@
+newXuWzW@@_@3rOW__@@MaWHW_ImlVF0jR@x838X@lvVr_QQ_@iVz@@_NHB3QR73
+t9g2@Vz@_@@Vz@_@Z@@@FUUCyeF3Uzd1c@VDz@@p7tF3e@_@75532Gc11anWu7nW
+u@@@0_bGosO8SRCuVD_t@tzc@@zFVFWss@x@Lull5vCCy@h@x@@@p@lyVJuCWV@@
+zd_CWR@y@OGIuRE6ihF3i@x@xtVVt@7z@HBOuwR9uVD@NF@@MW_Cm@NlhI@@A@3W
+uk_@t3qd1w_z@3fM2_lp@Nwd1N9w1@@x@t_81@@@@qu@EYdN2_w@2z@Q@7qd4YxY
+1XKB1zz@@_@t@Tz@@x@htr@@@PwvCm@@7fd@@VD_@@1qJ2@@@t3mYXB@z0D@@R@@
+s@Hgn0@yVX_@l@1eufx@tVp@lNW@@@lp2PGV1I80W6u@RtzDV6Oz@@FID94hj7y@
+J3Gx@lCc864XZ4Yr63_@@U6uK2jjp0@lx@_@@@z@oVwl@xuxV9uf@_FcU94O93sH
+73tjB1lzl6_@h@Yxd1q@@RyRf@xl@18O96uz2_o@Tzuy@Cm@lrk@_ltMbOW@@@Vt
+@x@vKxXurbWtruV@ztRXC8XOYmW2_30Tzy@Xjp0lzv@_@zVz@@@u@Z_Ba16uV1_n
+L@@l@@@VqyspXEpW0BPW@@@luvbWF@@T@@@Wvgx1@R@l_@V8zfc@htVVBa16u@lt
+Nf@@d10KuWmzWV@@Vizn@PjpWUdOWz@@V@Fm@npp0l@xN_lhV7zd1_d@Een@T6F5
+32PW1_@j1YYI2_6W@zu@t4sE3yp@@x@v_tE@@tMtIGz@@V4dC8_O6qi63y@@_x_@
+ls@l_lr@UV@Vz@_lz@yVn@3y@Ns@9zl@RgS@@@x_@spNrd1qyt@r@Rhwtv@s0w@b
+@@lK@_N@04y@Zxd1g7W@z_@teSu@NQ@EGFwC8aQ6uz@@t@@_l_@@@8EnWx3@@eFa
+G4dI84E64n96y@Db7sE3y@d@hz@FkyV9u@@tB6LIu@V_t@@tc@t@Vp@V@npZ1@@t
+@_7W@zll0u@@@tVvzl@JxV@@lce@@@zsz@gtl78uL6ulz1au@VdtVxV@Nax_@@tz
+@@x6mD3yVj@B@@@FuL94QF3c8Z1Sz@@z@@@xVu@t@@Ef@reM@lrRneY1@38Ow@kt
+b40@het186L6urq_rR@_l@@lkmTjnl_OOQV64kB3ylV@3Gmxt_ldKm@Imz@@UGuC
+m@z@c@@T@0zPWI@blmTzW@l@Vl@@VUx@@hud1XxoWMkPG@AgW6@@lyUx@0zbG8rC
+mrldKW_ImQz_QW_C88SC4IjAy@@@9x@@FoPF49k72fc11Xp0x@s@_jxl32d1_@l_
+1eukuhtVp@@NKybCGc@@VGuCeMBIyGF62fM21wpZW_aW@DebWIPW@_@VNyx@_@@x
+ztj@x@@@t@lyHO9OmJ@xe@@z@e1nGREUOTO6u@@raZV_dt_xN@@r0q@@RjRf@xlx
+08ID6uzY_wAM9u@twp@E_d@@@lAzPWRszV@@@v_xp@z_@@x@t@rV@tLh@ImtQueF
+_vD@zx@UU0j3qd1_7G0q@ll7z13qzZ@7ID6y@8@u@B@DvV6u@@@qM@@l@@@VG@_p
+_@y@ZdN2_@@@y@@Z6Of4y@@@s5c7YYN2_xttCwl@xv1qt@VzViTCm@l@UKjCGNF@
+l@3@V@_@@Uxn@z@l@6FF62MI5_@@@en@@xlt6DsE6uYTBCG690W@BmV0yNyyIugS
+64s462e53ngX1@@@FNB9X0a9HYZCm@lzDD@@V@_sx1XRZeoOGM@C8aKCySe4YJH2
+_@@@zVFQu@@@pRZ@Ryymm@t4VGuIeM1Cu@@@r@py@YtO8mI6uf@@_vN64el4yz@V
+l6C6y@tsx@@@3a@gfd@@lGumW@_5mmTnW@@@F@@x@_Zj6z@t@xt@@Q2RLqPF3yz@
+@x@@utpQyl@@vDVzx@1wB1x280XxY1tyDjUDj@1m7@Nnk7oPm31tZX_@PGOxIebJ
+9Cc56ylc@x_@VBiTCOV05pz@@kN0uV5zFm1wp0@d_@HdJYO_PGW_C0G@@l@@@@8N
+OGOxoPLUF4Ag4A8Z1npxXlKOma@C8i494Fl708u@x@t1p@@Na@@x@v@PW@_djlx9
+nnpCuxSF4M29ysx06Fl725L2vAWXVmzGl_am@xxVGuUOdLCup@rCGV9G@z@FCHCu
+@Y_7G@@UwbI8zCO4qd42qN2k@lt2qt6kvVSzQQ@pjV@F0WF4Zg7y@@@px@@VHH6a
+7E32273L_Z1_xx@_@V_3qd4neA15z@lXKp0@@@@Sx@@Z7G8_y@@3aX4neI2@tvhI
+x@6yx@@x_@@F3EFyrE6YCW1ByAXeQ9nSzIO8N64B190eO@x@tVpS@Na@1@@mwPGa
+1g80W6u@v_t@@3S8rWn@Dyxx@Um@@BG00buOVC4el4Cu@@5t09mv@Q6hj7yt002y
+@@tx1zl@BwVV@@xVzpWO9am_@Im@@FGw0g8MRIO001BGVCuc@vCM2LS4kGil_@x@
+@Br@@@lT1xV@@VU_@@sxzN2U@@@Y_W4Xjp0lDt@AwVuZUd1_F@@32d4XCW1W@@@n
+cmWWmbWV@xxmsb001h_mIG21_@zmIKHG6U8WCI4MYAy@V30Gm_Fi46u@t@FiU6uz
+@PBa1X4M2C2PW4XbWXqsjHOYIO7U64o03qw@@VYbA2oG5XC81u@@xXj3ZWCmW@X@
+@mszG83U8iTIuiV@F83aaC962fc1_@t1dZd4X9oW0PyW10Ky0zPWY_@_uvjH83g8
+83au@QVLQ@lM4E29lKL4kh7kyc1k@@zz@z@7eF3Yuq3_@zqCt@55el4q@@l5MYDk
+1N2_F@@3qN51PuaZ_zW@lx@rnbGeFO8i464mZ7YNX4_R009s@@xTp_t@5zlz@@z3
+pPG83m8K0I4oWJYbW4_y@@z_z@lMYDYEN2_Ni@RmZ17lB1z@@@XCu1b_@Unap0fD
+t@H68XuWLnFxC8G66CNA3kjd1n1xX0BbGmIyO7LO4WC96fJ23jwXWbyW@VxV0A_z
+XCm0@t@@nI0Z@TLH4Em0Of@VKK89o0aCJl4S@@@V0C6YCG54@@@z_Ppv@Y_N_@@U
+O9ym@@Vlv_@@9wnGuLu9o0g4AgAYmH5Ux@@Lq@_7lYG2P09H6GbnhiH8rOO6BL4w
+ZAS@xl5hjGcsI51af2Wr@znQJYLj9nQiIeIOFy2F3YCG5hqB1@@lc_@t@ZC06t2p
+WcsbGy08n@QylV@xj83WHyyI8o0C4F6FYC03Xs8X1c8Ha1Om@t@lI@@F@1eunewX
+83yGvMauDUC4P06Sz@5w@t_B83pKxC9YmH5btZXWCiH83U8U0a4R7F2P03BdRZ4w
+LHq7g8hU94z1F2G63n3ua8EvXkV_@mI8Nq729i4H5P0a3anCXuBXG6W70_70_300
+00u_rF0910000004i10uD@@n@kOt2zV@@xza0GLF_lq_V0Dy60_8WBiRX@001U70
+0KW7@FDU0G3v1G23000418@WCHG0uwn40100H100000004I0000000j0W0001R@7
+0G0Wb0WV00G0000000000W00000W00X08X60OG60I8Z0L0o10YDW00z0SS10n@_7
+0O0Wb10IW_t0@LYRszV@As0_tM0qrd@BjVuN3GE0m0000e5W080809000200G0y3
+Wt2v39zvlAyF2inx00W@Vq@fz30QyV3ytVkPt@z@zdx@@@NN@@l@@9RFz@@n_p0@
+Vo@Rdo0JskzvvX4@@@V_@Dlzp@NOt2@t@_@k@@lAF_VQ_No6MDb1_@@_ByZ1_@V@
+DPx@txeDopN5s_@_Z_d1_Vp@h3m9_xt@S@@_xVt@N@@tj@t@V@_@z_@k@zt@zx@@
+ztrt@l@@z@m_PW@z@zwXPW@zzVx@@z_@@@z@tl7vF3yV@t7Nh72yd1k@@@3uN2_z
+@@qFV@htv@t_x@l@xlVkx_@_@@@T@@xQt@@t@@@j@RtTk@@@_@l@TxkxMYF3gEc1
+pLA1_@@x_l@@zz@x7I03UGc1_lV@v_ztxttVtv@zl@@@V@_xl_@@xzyt@xV@zN@V
+xZ@_@Txl@@_xV_r@l@NTC6sCW1_@FVv@l@Zl_@p@vhl@zVVt@V@EVz@j@zlx@@Rq
+@z_ll__@MtPW__@Vzs@@_@xxr@@@p_@@p@VV@xdC8fN6u@@zt_@@d@ttV@@@yw@@
+@rl@rh@z@p_xVl@j@U@@Vx_@x@jzt@pzz@JE@@l@ztVx@V@_px@z@_zxj@@NT@Vl
+t@@N@@@zw@xVtyc1_x@zz@@@xU@@r@@@dz@@wj@PW@@TVt@@Vk@z@zlxVx@@xM@@
+@lT@xV@tL_y@@@zz@@x@@tt@lxdxp@Vt@s_t@p0_@@lzGBXUbPW@@@U@t@V_@@@z
+@VVx@@@dl@@@omO8_KUu@@xVoC6u@xxlEVFO@xzluU6Kj6CEHs3JnwXAd8HpIaOL
+FIyii7AzN2ThnW5_8n2RC8tLFy2WBMBZAQRRRF0m0QRRRr@ssx@jzt@RRl@stV@j
+jjn0mWFE9nV0EHRRVhssssbFGIS1ifpJd4G0yYF0O_@@@izljPRRRp@tsVOyOmts
+ssf3CumHUu@@@hu19uVRxt@s_l@jjVVxx@_sss_WW1s_@@lR0FP@9aODKnX5i9_2
+piGj4k9t3_Vx@7h0FPtHbW5nmK5yU04i5VDCQ81FHcp0@@@zdMuam9zm5tIG@x@@
+4ny8cT6u@l@VlRCadF3g2K5nRudKAqe@jjj6QOWjz@FRx@Vs_@tiz@@5S23ijjjP
+RR@FnPUuVR@pssscz@@DR@@@_t@@wSN2v1m0xVx@LRu@5Ueb@tsMjjjjQ@RRrs_@
+hjz@NR@@hs_@VjzljVE8X@0yJUt210;
+
+NOTE JAM_VERSION "1.0";
+NOTE ALG_VERSION "1.0";
+INTEGER A0[12] =
+791, 237, 253, 261, 273, 281, 293, 317, 791, 791, 791, 791;
+INTEGER A1[12] =
+640, 80, 160, 240, 320, 400, 480, 640, 160, 200, 240, 280;
+INTEGER A2[12] =
+165, 0, 0, 0, 0, 0, 0, 0, 165, 165, 165, 165;
+INTEGER A3[12] =
+112, 0, 0, 0, 0, 0, 0, 0, 64, 80, 96, 112;
+INTEGER A4[12] =
+648, 0, 0, 0, 0, 0, 0, 0, 504, 552, 600, 648;
+INTEGER A5[12] =
+128, 16, 32, 48, 64, 80, 96, 128, 32, 40, 48, 56;
+INTEGER A6[12] =
+16, 2, 4, 6, 8, 10, 12, 16, 0, 0, 0, 0;
+INTEGER A7[12] =
+7, 0, 0, 0, 0, 0, 0, 0, 4, 5, 6, 7;
+INTEGER A8[12] =
+560, 32, 64, 96, 128, 160, 192, 256, 320, 400, 480, 560;
+INTEGER A9[21] =
+126, 3, 1, 118, 1, 3, 0, 0, 0, 131, 3, 6, 0, 0, 0, 131, 3, 8, 131, 3, 12;
+INTEGER A10[14] = 1, 1, 1, 3, 0, 0, 3, 6, 0, 0, 3, 8, 3, 12;
+INTEGER V53 = 3;
+INTEGER V54 = 3;
+INTEGER A11[V53 * V54 * 11] =
+0, 0, 0, 0, 0, 0, 0, 0, 0,
+96, 1, 0, 97, 0, 1, 0, 0, 0,
+0, 0, 0, 0, 0, 0, 0, 0, 0,
+96, 0, 0, 97, 0, 1, 96, 1, 2,
+0, 0, 0, 0, 0, 0, 0, 0, 0,
+96, 0, 0, 0, 0, 0, 0, 0, 0,
+96, 2, 0, 97, 0, 1, 96, 1, 2,
+94, 1, 0, 0, 0, 0, 0, 0, 0,
+95, 0, 0, 0, 0, 0, 0, 0, 0,
+95, 0, 0, 0, 0, 0, 0, 0, 0,
+94, 1, 0, 0, 0, 0, 0, 0, 0;
+INTEGER A14[64] =
+20, 40, 60, 80, 100, 120, 140, 160, 180, 200, 220, 240,
+260, 280, 300, 340, 360, 380, 400, 440, 480, 520, 560, 600,
+660, 720, 800, 900, 1000, 1300, 1600, 2000,
+3, 4, 5, 7, 9, 11, 12, 14, 16, 20, 24, 28,
+36, 50, 64, 86, 116, 154, 200, 280, 360, 480, 640, 860,
+1140, 1540, 2000, 2800, 3600, 4800, 6400, 8600;
+INTEGER A15[16] =
+10, 20, 30, 40, 60, 100, 200, 500,
+100, 260, 660, 1660, 4200, 10800, 28000, 60000;
+' VARIABLES
+INTEGER V0 = 1;
+INTEGER A12[V0] = 8;
+INTEGER A13[V0] = 2 | 4;
+INTEGER A25[V0] = 10;
+INTEGER V1 = V0 - 1;
+INTEGER V2 = 0;
+INTEGER V3 = 0;
+INTEGER V4 = 2;
+INTEGER A17[V0];
+BOOLEAN b;
+INTEGER i;
+INTEGER j;
+INTEGER k;
+INTEGER l;
+INTEGER V10;
+INTEGER V11;
+INTEGER V12;
+INTEGER V13;
+BOOLEAN A18[10];
+BOOLEAN A19[10];
+BOOLEAN A20[10];
+INTEGER V14;
+INTEGER V15;
+INTEGER V17;
+INTEGER V18;
+INTEGER V19;
+INTEGER V20;
+INTEGER V22;
+INTEGER V23;
+INTEGER V24;
+INTEGER V25;
+INTEGER V26;
+INTEGER V27;
+INTEGER V28;
+INTEGER V29 = 1;
+INTEGER A16[15];
+INTEGER V30;
+INTEGER V31;
+INTEGER V32 = 0;
+INTEGER V33 = 0;
+INTEGER V34 = 1;
+INTEGER V35 = 0;
+INTEGER V36 = 0;
+INTEGER V37 = 0;
+INTEGER V38 = 0;
+INTEGER V70 = 0;
+INTEGER V71 = 0;
+BOOLEAN V39 = 0;
+BOOLEAN V40 = 0;
+INTEGER V41 = 0;
+INTEGER V42 = 0;
+BOOLEAN V49 = 0;
+BOOLEAN V72 = 0;
+BOOLEAN V73 = 0;
+BOOLEAN V56 = 0;
+BOOLEAN V57 = 0;
+BOOLEAN DO_ERASE = 0;
+BOOLEAN DO_BLANKCHECK = 0;
+BOOLEAN DO_PROGRAM = 0;
+BOOLEAN DO_VERIFY = 0;
+BOOLEAN DO_SECURE = 0;
+BOOLEAN DO_SECURE_ALL = 0;
+L0:
+CALL L3;
+LET V4 = 2;
+CALL L16;
+IF (V2 == 0) THEN GOTO L1;
+IF (V42 == 0) THEN CALL L39;
+IF ((V42 == 0) && DO_ERASE) THEN CALL L24;
+IF ((V42 == 0) && DO_BLANKCHECK) THEN CALL L32;
+IF ((V42 == 0) && DO_PROGRAM) THEN CALL L22;
+IF ((V42 == 0) && DO_VERIFY) THEN CALL L30;
+IF ((V42 == 0) && DO_SECURE) THEN CALL L131;
+L1:
+CALL L14;
+EXIT V42;
+L3:
+INTEGER V65 = 0;
+IF (DO_PROGRAM) THEN LET DO_ERASE = 1;
+IF (DO_SECURE_ALL) THEN LET DO_SECURE = 1;
+IF ((DO_ERASE || DO_BLANKCHECK) && !DO_PROGRAM &&
+(DO_VERIFY || DO_SECURE)) THEN LET V42 = 1;
+IF (V42 != 0) THEN GOTO L13;
+LET V22 = 0;
+FOR i = 0 TO V1;
+LET j = 1;
+LET k = 1;
+IF (((A13[i] & 2) == 0) ||
+((A13[i] & 4) == 0)) THEN GOTO L7;
+LET V2 = A12[i];
+LET j = A1[V2];
+LET k = A5[V2];
+L7:
+LET V22 = V22 + j;
+LET V65 = V65 + k;
+NEXT i;
+BOOLEAN A27[V22];
+LET k = 0;
+FOR i = 0 TO V1;
+IF (((A13[i] & 2) == 0) ||
+((A13[i] & 4) == 0)) THEN GOTO L8;
+LET V2 = A12[i];
+FOR j = 0 TO (A1[V2] - 1);
+IF ((j % 5) == 4) THEN LET A27[k] = 1;
+LET k = k + 1;
+NEXT j;
+GOTO L9;
+L8:
+LET k = k + 1;
+L9:
+NEXT i;
+LET V17 = 0;
+FOR i = 0 TO V1;
+LET j = 1;
+IF (((A13[i] & 2) == 0) ||
+((A13[i] & 4) == 0)) THEN GOTO L11;
+LET V2 = A12[i];
+LET j = A0[V2];
+L11:
+LET V17 = V17 + j;
+NEXT i;
+LET V18 = V17;
+BOOLEAN A28[V18];
+LET V19 = V18;
+BOOLEAN A29[V19];
+BOOLEAN A30[V19];
+FOR i = 0 TO (V19 - 1);
+LET A30[i] = 1;
+NEXT i;
+LET V20 = 2 * 5 * 5 * V65;
+BOOLEAN A31[V20];
+LET V33 = 0;
+FOR i = 0 TO V1;
+IF (((A13[i] & 2) == 0) ||
+((A13[i] & 4) == 0)) THEN GOTO L12;
+LET V2 = A12[i];
+IF (V33 < A7[V2]) THEN
+LET V33 = A7[V2];
+L12:
+NEXT i;
+LET V12 = 0;
+LET V13 = 0;
+FOR i = 0 TO V1;
+LET V12 = V12 + A25[i];
+IF (A25[i] > V13) THEN LET V13 = A25[i];
+NEXT i;
+BOOLEAN A32[V12 + 50];
+BOOLEAN A39[V13];
+BOOLEAN A33[V13];
+FOR i = 0 TO (V13 - 1);
+LET A39[i] = 1;
+NEXT i;
+BOOLEAN A34[50];
+BOOLEAN A35[50];
+BOOLEAN A36[50];
+BOOLEAN A37[50];
+BOOLEAN A38[70];
+FOR i = 0 TO 4;
+LET j = 10 * i;
+LET A34[j..(j + 9)] = 016;
+LET A35[j..(j + 9)] = 01A;
+LET A36[j..(j + 9)] = 022;
+LET A37[j..(j + 9)] = 026;
+FOR k = 0 TO 2;
+LET b = 0;
+IF ((i & (1 << k)) != 0) THEN LET b = 1;
+LET A34[j + k + 7] = b;
+LET A35[j + k + 7] = b;
+LET A36[j + k + 7] = b;
+LET A37[j + k + 7] = b;
+NEXT k;
+NEXT i;
+FOR i = 0 TO 6;
+LET j = 10 * i;
+LET A38[j..(j + 9)] = 02A;
+FOR k = 0 TO 2;
+LET b = 0;
+IF ((i & (1 << k)) != 0) THEN LET b = 1;
+LET A38[j + k + 7] = b;
+NEXT k;
+NEXT i;
+CALL L19;
+IRSTOP IRPAUSE;
+DRSTOP IDLE;
+PADDING 0, 0, 0, 0;
+STATE RESET;
+STATE IDLE;
+LET A18[0..9] = 071;
+LET V4 = 2;
+CALL L143;
+WAIT 10000 USEC;
+L13:
+RETURN;
+L14:
+IF (V42 == 1) THEN GOTO L15;
+CALL L20;
+LET A18[0..9] = 079;
+CALL L143;
+WAIT 10000 USEC;
+STATE RESET;
+L15:
+IF (V42 == 0) THEN
+PRINT "DONE";
+IF (V42 == 1) THEN
+PRINT CHR$(7), CHR$(7), CHR$(7),
+"Invalid option combination specified";
+IF (V42 == 2) THEN
+PRINT CHR$(7), CHR$(7), CHR$(7),
+"Unrecognized device";
+IF (V42 == 3) THEN
+PRINT CHR$(7), CHR$(7), CHR$(7),
+"Device revision is not supported";
+IF (V42 == 4) THEN
+PRINT CHR$(7), CHR$(7), CHR$(7),
+"Device programming failure";
+IF (V42 == 5) THEN
+PRINT CHR$(7), CHR$(7), CHR$(7),
+"Device is not blank";
+IF (V42 == 6) THEN
+PRINT CHR$(7), CHR$(7), CHR$(7),
+"Device verify failure";
+RETURN;
+L16:
+LET j = 0;
+FOR i = 0 TO V1;
+IF ((j <= V3) &&
+((A13[i] & V4) != 0) &&
+((A13[i] & 4) != 0)) THEN LET j = i + 1;
+NEXT i;
+IF (j > V3) THEN GOTO L17;
+LET V2 = 0;
+LET V3 = 0;
+GOTO L18;
+L17:
+LET V2 = A12[j - 1];
+LET V3 = j;
+L18:
+RETURN;
+L19:
+CALL L20;
+IF (V32 == 0) THEN CALL L142;
+LET V10 = 0;
+LET V14 = 0;
+LET V15 = 0;
+LET V49 = 1;
+LET V34 = 0;
+LET V29 = 1;
+IF (DO_PROGRAM) THEN LET V29 = 0;
+IF (DO_ERASE && V72) THEN LET V29 = 2;
+RETURN;
+L20:
+FOR i = 0 TO V1;
+LET A17[i] = A13[i];
+NEXT i;
+RETURN;
+L22:
+PRINT "programming 9K device(s)...";
+CALL L19;
+FOR V11 = 1035 TO 1196;
+CALL L100;
+CALL L121;
+NEXT V11;
+LET V49 = 1;
+FOR V11 = 2069 TO 2074;
+CALL L100;
+CALL L121;
+CALL L20;
+NEXT V11;
+LET V49 = 1;
+FOR V11 = 4097 TO 4114;
+CALL L100;
+CALL L121;
+NEXT V11;
+LET V49 = 1;
+FOR V11 = 4869 TO 4886;
+CALL L100;
+CALL L121;
+NEXT V11;
+LET V49 = 1;
+FOR V11 = 8193 TO 8210;
+CALL L100;
+CALL L121;
+NEXT V11;
+LET V49 = 1;
+FOR V11 = 8965 TO 8982;
+CALL L100;
+CALL L121;
+NEXT V11;
+RETURN;
+L24:
+LET A18[0..9] = 392;
+CALL L143;
+LET A18[0..9] = 01E;
+CALL L143;
+DRSCAN V17, A30[0..(V17 - 1)];
+LET A18[0..9] = 396;
+CALL L143;
+DRSCAN V22, A29[0..(V22 - 1)];
+LET A18[0..9] = 006;
+CALL L143;
+LET A18[0..9] = 00A;
+CALL L143;
+LET V56 = 1;
+WAIT (V37 * 100) USEC;
+LET A18[0..9] = 392;
+CALL L143;
+LET A18[0..9] = 39A;
+CALL L143;
+DRSCAN V22, A29[0..(V22 - 1)];
+LET A18[0..9] = 006;
+CALL L143;
+LET A18[0..9] = 00A;
+CALL L143;
+LET V56 = 1;
+WAIT (V37 * 100) USEC;
+LET A18[0..9] = 392;
+CALL L143;
+FOR i = 0 TO (V33 - 1);
+LET j = 10 * i;
+LET k = 0;
+LET A18[0..9] = A38[j..(j + 9)];
+LET V57 = 1;
+FOR j = 0 TO V1;
+IF (((A17[j] & 2) == 0) ||
+((A17[j] & 4) == 0)) THEN GOTO L25;
+LET V2 = A12[j];
+IF (i >= A7[V2]) THEN
+LET A17[j] = A17[j] | 8;
+IF ((A17[j] & 8) != 0) THEN
+LET A29[k..(k + A2[V2] - 1)] =
+A30[0..(A2[V2] - 1)];
+LET k = k + A2[V2] - 1;
+L25:
+LET k = k + 1;
+NEXT j;
+PUSH i;
+CALL L143;
+DRSCAN k, A29[0..(k - 1)];
+LET A18[0..9] = 006;
+CALL L143;
+LET A18[0..9] = 00A;
+CALL L143;
+LET V56 = 1;
+WAIT (V37 * 100) USEC;
+LET A18[0..9] = 392;
+CALL L143;
+POP i;
+NEXT i;
+FOR i = 0 TO (V19 - 1);
+LET A29[i] = 0;
+NEXT i;
+LET j = 0;
+FOR i = 0 TO V1;
+IF (((A17[i] & 2) == 0) ||
+((A17[i] & 4) == 0)) THEN GOTO L26;
+LET V2 = A12[i];
+LET j = j + A3[V2] - 1;
+L26:
+LET j = j + 1;
+NEXT i;
+LET A18[0..9] = 032;
+CALL L143;
+DRSCAN j, A29[0..(j - 1)];
+LET A18[0..9] = 006;
+CALL L143;
+LET A18[0..9] = 00A;
+CALL L143;
+LET V56 = 1;
+WAIT (V37 * 100) USEC;
+LET A18[0..9] = 392;
+CALL L143;
+LET j = 0;
+FOR i = 0 TO V1;
+IF (((A17[i] & 2) == 0) ||
+((A17[i] & 4) == 0)) THEN GOTO L27;
+LET V2 = A12[i];
+LET j = j + A4[V2] - 1;
+L27:
+LET j = j + 1;
+NEXT i;
+LET A18[0..9] = 02E;
+CALL L143;
+DRSCAN j, A29[0..(j - 1)];
+LET A18[0..9] = 006;
+CALL L143;
+LET A18[0..9] = 00A;
+CALL L143;
+LET V56 = 1;
+WAIT (V37 * 100) USEC;
+LET A18[0..9] = 392;
+CALL L143;
+LET A18[0..9] = 392;
+CALL L143;
+LET A18[0..9] = 01E;
+CALL L143;
+DRSCAN V17, A30[0..(V17 - 1)];
+LET A18[0..9] = 006;
+CALL L143;
+LET A18[0..9] = 38E;
+CALL L143;
+LET A18[0..9] = 00A;
+CALL L143;
+LET V56 = 1;
+WAIT (V38 * 1000) USEC;
+LET A18[0..9] = 392;
+CALL L143;
+LET A18[0..9] = 01E;
+CALL L143;
+DRSCAN V17, A29[0..(V17 - 1)];
+LET A18[0..9] = 392;
+CALL L143;
+RETURN;
+L30:
+IF (V72) THEN PRINT "blank checking 9K device(s)...";
+IF (!V72) THEN PRINT "verifying 9K device(s)...";
+CALL L19;
+FOR V11 = 1035 TO 1196;
+CALL L100;
+CALL L76;
+IF (V42 != 0) THEN LET V11 = 1196;
+NEXT V11;
+IF (V42 != 0) THEN GOTO L31;
+LET V49 = 1;
+FOR V11 = 2069 TO 2074;
+CALL L100;
+CALL L76;
+CALL L20;
+IF (V42 != 0) THEN LET V11 = 2074;
+NEXT V11;
+IF (V42 != 0) THEN GOTO L31;
+LET V49 = 1;
+FOR V11 = 4097 TO 4114;
+CALL L100;
+CALL L76;
+IF (V42 != 0) THEN LET V11 = 4114;
+NEXT V11;
+IF (V42 != 0) THEN GOTO L31;
+FOR V11 = 4869 TO 4886;
+CALL L100;
+CALL L76;
+IF (V42 != 0) THEN LET V11 = 4886;
+NEXT V11;
+IF (V42 != 0) THEN GOTO L31;
+LET V49 = 1;
+FOR V11 = 8193 TO 8210;
+CALL L100;
+CALL L76;
+IF (V42 != 0) THEN LET V11 = 8210;
+NEXT V11;
+IF (V42 != 0) THEN GOTO L31;
+FOR V11 = 8965 TO 8982;
+CALL L100;
+CALL L76;
+IF (V42 != 0) THEN LET V11 = 8982;
+NEXT V11;
+L31:
+RETURN;
+L32:
+LET V72 = 1;
+CALL L30;
+LET V72 = 0;
+RETURN;
+L39:
+CALL L19;
+LET V37 = 100;
+LET V38 = 100;
+LET V29 = 1;
+LET V11 = 8192;
+CALL L100;
+LET V34 = 1;
+CALL L76;
+LET V30 = V24 - 1;
+FOR i = V1 TO 0 STEP -1;
+IF (((A17[i] & 2) == 0) ||
+((A17[i] & 4) == 0)) THEN GOTO L53;
+LET V2 = A12[i];
+LET V30 = V30 - (A4[V2] - 1);
+FOR j = 0 TO 14;
+INTEGER V68 = 0;
+LET A16[j] = 0;
+LET V27 = 0;
+IF (j > 7) THEN GOTO L40;
+LET V27 = j * 8;
+LET V68 = 8;
+L40:
+IF (j != 8) THEN GOTO L41;
+LET V27 = 64;
+LET V68 = 5;
+L41:
+IF (j != 9) THEN GOTO L42;
+LET V27 = 69;
+LET V68 = 3;
+L42:
+IF (j != 10) THEN GOTO L43;
+LET V27 = 72;
+LET V68 = 3;
+L43:
+IF (j != 11) THEN GOTO L44;
+LET V27 = 75;
+LET V68 = 5;
+L44:
+IF (j != 12) THEN GOTO L45;
+LET V27 = 80;
+LET V68 = 3;
+L45:
+IF (j != 13) THEN GOTO L46;
+LET V27 = 83;
+LET V68 = 5;
+L46:
+IF (j != 14) THEN GOTO L47;
+LET V27 = 88;
+LET V68 = 1;
+L47:
+FOR k = 0 TO (V68 - 1);
+INTEGER V69 = 0;
+LET l = 0;
+IF (V2 != 8) THEN GOTO L48;
+IF ((k + V27) >= 57) THEN LET V69 = 1;
+IF ((k + V27) >= 83) THEN LET V69 = 3;
+L48:
+IF (V2 != 9) THEN GOTO L49;
+IF ((k + V27) >= 65) THEN LET V69 = 1;
+L49:
+IF (V2 != 10) THEN GOTO L50;
+IF ((k + V27) >= 73) THEN LET V69 = 1;
+L50:
+IF (V2 != 11) THEN GOTO L51;
+IF ((k + V27) >= 81) THEN LET V69 = 1;
+L51:
+LET l = 3 * (k + V27 + V69);
+IF (A31[l + V30]) THEN
+LET A16[j] = A16[j] | (1 << ((V68 - 1) - k));
+NEXT k;
+NEXT j;
+IF ((A16[0] != 65) &&
+(A16[1] != 76) &&
+(A16[2] != 84) &&
+(A16[3] != 69) &&
+(A16[4] != 82) &&
+(A16[5] != 65))
+THEN LET V42 = 2;
+IF (V42 != 0) THEN GOTO L53;
+LET V35 = ((A16[6] - 48) * 10) + (A16[7] - 48);
+LET V36 = A16[8] & 31;
+LET V27 = V53 * V54 * (V2 - 1);
+LET V40 = 0;
+IF ((V36 & 16) != 0) THEN LET V40 = 1;
+FOR j = 0 TO (V53 - 1);
+IF ((V35 != A11[V27]) ||
+(V36 != A11[V27 + 1])) THEN
+GOTO L52;
+LET V40 = 1;
+L52:
+LET V27 = V27 + V54;
+NEXT j;
+PRINT "Device #", V0 - i ," Silicon ID is ",
+CHR$(A16[0]), CHR$(A16[1]), CHR$(A16[2]), CHR$(A16[3]),
+CHR$(A16[4]), CHR$(A16[5]), CHR$(A16[6]), CHR$(A16[7]),
+"(", CHR$(((V36 >> 4) & 1) + 48), CHR$((V36 & 15) + 48), ")"
+;
+IF (!V40) THEN LET V42 = 3;
+L53:
+LET V30 = V30 - 1;
+NEXT i;
+RETURN;
+L70:
+LET A18[0..9] = A19[0..9];
+IF (V57) THEN GOTO L71;
+CALL L143;
+GOTO L72;
+L71:
+LET V57 = 0;
+CALL L143;
+LET V57 = 1;
+L72:
+WAIT 15 USEC;
+LET A18[0..9] = A20[0..9];
+CALL L143;
+IF (V34 == 0) THEN GOTO L73;
+DRSCAN V24, A29[0..(V24 - 1)], CAPTURE A31[V30..V31];
+GOTO L75;
+L73:
+IF (V72) THEN GOTO L74;
+DRSCAN V24, A29[0..(V24 - 1)], COMPARE A24[V30..V31],
+A30[0..(V24 - 1)], V40;
+IF (!V40) THEN LET V39 = 1;
+GOTO L75;
+L74:
+DRSCAN V24, A29[0..(V24 - 1)],
+COMPARE A30[0..(V24 - 1)], A30[0..(V24 - 1)],
+V40;
+IF (!V40) THEN LET V39 = 1;
+L75:
+RETURN;
+L76:
+LET V39 = 0;
+LET V40 = 1;
+IF (V49) THEN CALL L152;
+IF (V34 == 1) THEN GOTO L77;
+LET V30 = V15;
+LET V31 = V30 + (V24 - 1);
+GOTO L78;
+L77:
+LET V30 = 0;
+LET V31 = V24 - 1;
+L78:
+LET V28 = 0;
+IF ((V10 & 64512) == 1024) THEN GOTO L79;
+IF ((V10 & 64512) == 2048) THEN GOTO L86;
+GOTO L89;
+L79:
+IF (V29 == 0) THEN
+LET A19[0..9] = 042;
+IF (V29 == 1) THEN
+LET A19[0..9] = 03E;
+IF (V29 == 2) THEN
+LET A19[0..9] = 03E;
+IF ((V10 >= 1059) && (V10 <= 1172)) THEN
+LET V28 = 4;
+IF (V28 == 0) THEN GOTO L80;
+LET A18[0..9] = 396;
+CALL L143;
+DRSCAN V22, A27[0..(V22 - 1)];
+L80:
+FOR i = 0 TO V28;
+PUSH i;
+FOR j = 0 TO 4;
+IF (V10 > 1172) THEN GOTO L82;
+LET k = 10 * j;
+LET A20[0..9] = A36[k..(k + 9)];
+PUSH j;
+CALL L70;
+IF (V29 != 0) THEN GOTO L81;
+LET A19[0..9] = 03E;
+CALL L70;
+LET A19[0..9] = 042;
+L81:
+POP j;
+LET V30 = V30 + V24;
+LET V31 = V31 + V24;
+L82:
+IF (V10 < 1059) THEN GOTO L84;
+LET k = 10 * j;
+LET A20[0..9] = A37[k..(k + 9)];
+PUSH j;
+CALL L70;
+IF (V29 != 0) THEN GOTO L83;
+LET A19[0..9] = 03E;
+CALL L70;
+LET A19[0..9] = 042;
+L83:
+POP j;
+LET V30 = V30 + V24;
+LET V31 = V31 + V24;
+L84:
+NEXT j;
+IF (V28 == 0) THEN GOTO L85;
+LET A18[0..9] = 396;
+CALL L143;
+STATE DRSHIFT;
+STATE IDLE;
+L85:
+POP i;
+NEXT i;
+GOTO L92;
+L86:
+IF (V29 == 0) THEN
+LET A19[0..9] = 03A;
+IF (V29 == 1) THEN
+LET A19[0..9] = 036;
+IF (V29 == 2) THEN
+LET A19[0..9] = 036;
+FOR i = 0 TO (V33 - 1);
+LET V57 = 1;
+LET j = 10 * i;
+LET A20[0..9] = A38[j..(j + 9)];
+FOR j = 0 TO V1;
+IF (((A17[j] & 2) == 0) ||
+((A17[j] & 4) == 0)) THEN GOTO L87;
+LET V2 = A12[j];
+IF (i >= A7[V2]) THEN
+LET A17[j] = A17[j] | 8;
+L87:
+NEXT j;
+PUSH i;
+CALL L70;
+IF (V29 != 0) THEN GOTO L88;
+LET A19[0..9] = 036;
+LET V57 = 1;
+CALL L70;
+LET A19[0..9] = 03A;
+L88:
+POP i;
+LET V30 = V30 + V24;
+LET V31 = V31 + V24;
+NEXT i;
+GOTO L92;
+L89:
+IF (V29 == 0) THEN
+LET A19[0..9] = 04A;
+IF (V29 == 1) THEN
+LET A19[0..9] = 046;
+IF (V29 == 2) THEN
+LET A19[0..9] = 046;
+IF ((V10 & 64512) == 4096) THEN
+LET A20[0..9] = 032;
+IF ((V10 & 64512) == 8192) THEN
+LET A20[0..9] = 02E;
+IF (V10 != 8192) THEN GOTO L90;
+LET A18[0..9] = 04E;
+CALL L143;
+L90:
+CALL L70;
+IF (V29 != 0) THEN GOTO L91;
+LET A19[0..9] = 046;
+CALL L70;
+LET A19[0..9] = 04A;
+L91:
+LET V30 = V30 + V24;
+LET V31 = V31 + V24;
+L92:
+LET V15 = V30;
+IF (!V39) THEN GOTO L93;
+IF (V72) THEN LET V42 = 5;
+IF (!V72) THEN LET V42 = 6;
+L93:
+RETURN;
+L100:
+LET V31 = 0;
+LET A18[0..9] = 01E;
+CALL L143;
+IF (V11 == 0) THEN GOTO L101;
+IF (V11 == 1035) THEN GOTO L104;
+IF (V11 == 2069) THEN GOTO L107;
+IF ((V11 == 4097) || (V11 == 4869)) THEN GOTO L110;
+IF ((V11 == 8193) || (V11 == 8965)) THEN GOTO L113;
+STATE DRSHIFT;
+STATE IDLE;
+GOTO L117;
+L101:
+LET i = V11 - 0;
+FOR j = 0 TO V1;
+IF (((A17[j] & 2) == 0) ||
+((A17[j] & 4) == 0)) THEN GOTO L102;
+LET V31 = V31 + 790;
+LET A28[V31 - 0 - i] = 1;
+L102:
+LET V31 = V31 + 1;
+NEXT j;
+DRSCAN V31, A28[0..(V31 - 1)];
+LET V31 = 0;
+FOR j = 0 TO V1;
+IF (((A17[j] & 2) == 0) ||
+((A17[j] & 4) == 0)) THEN GOTO L103;
+LET V31 = V31 + 790;
+LET A28[V31 - 0 - i] = 0;
+L103:
+LET V31 = V31 + 1;
+NEXT j;
+GOTO L117;
+L104:
+LET i = V11 - 1035;
+FOR j = 0 TO V1;
+IF (((A17[j] & 2) == 0) ||
+((A17[j] & 4) == 0)) THEN GOTO L105;
+LET V31 = V31 + 790;
+LET A28[V31 - 619 - i] = 1;
+LET A28[V31 - 467 - i] = 1;
+LET A28[V31 - 315 - i] = 1;
+LET A28[V31 - 163 - i] = 1;
+LET A28[V31 - 11 - i] = 1;
+L105:
+LET V31 = V31 + 1;
+NEXT j;
+DRSCAN V17, A28[0..(V17 - 1)];
+LET V31 = 0;
+FOR j = 0 TO V1;
+IF (((A17[j] & 2) == 0) ||
+((A17[j] & 4) == 0)) THEN GOTO L106;
+LET V31 = V31 + 790;
+LET A28[V31 - 619 - i] = 0;
+LET A28[V31 - 467 - i] = 0;
+LET A28[V31 - 315 - i] = 0;
+LET A28[V31 - 163 - i] = 0;
+LET A28[V31 - 11 - i] = 0;
+L106:
+LET V31 = V31 + 1;
+NEXT j;
+GOTO L117;
+L107:
+LET i = V11 - 2069;
+FOR j = 0 TO V1;
+IF (((A17[j] & 2) == 0) ||
+((A17[j] & 4) == 0)) THEN GOTO L108;
+LET V31 = V31 + 790;
+LET A28[V31 - 765 - i] = 1;
+LET A28[V31 - 629 - i] = 1;
+LET A28[V31 - 613 - i] = 1;
+LET A28[V31 - 477 - i] = 1;
+LET A28[V31 - 461 - i] = 1;
+LET A28[V31 - 325 - i] = 1;
+LET A28[V31 - 309 - i] = 1;
+LET A28[V31 - 173 - i] = 1;
+LET A28[V31 - 157 - i] = 1;
+LET A28[V31 - 21 - i] = 1;
+L108:
+LET V31 = V31 + 1;
+NEXT j;
+DRSCAN V17, A28[0..(V17 - 1)];
+LET V31 = 0;
+FOR j = 0 TO V1;
+IF (((A17[j] & 2) == 0) ||
+((A17[j] & 4) == 0)) THEN GOTO L109;
+LET V31 = V31 + 790;
+LET A28[V31 - 765 - i] = 0;
+LET A28[V31 - 629 - i] = 0;
+LET A28[V31 - 613 - i] = 0;
+LET A28[V31 - 477 - i] = 0;
+LET A28[V31 - 461 - i] = 0;
+LET A28[V31 - 325 - i] = 0;
+LET A28[V31 - 309 - i] = 0;
+LET A28[V31 - 173 - i] = 0;
+LET A28[V31 - 157 - i] = 0;
+LET A28[V31 - 21 - i] = 0;
+L109:
+LET V31 = V31 + 1;
+NEXT j;
+GOTO L117;
+L110:
+LET i = V11 - 4097;
+FOR j = 0 TO V1;
+IF (((A17[j] & 2) == 0) ||
+((A17[j] & 4) == 0)) THEN GOTO L111;
+LET V31 = V31 + 790;
+LET A28[V31 - 1 - i] = 1;
+L111:
+LET V31 = V31 + 1;
+NEXT j;
+DRSCAN V17, A28[0..(V17 - 1)];
+LET V31 = 0;
+FOR j = 0 TO V1;
+IF (((A17[j] & 2) == 0) ||
+((A17[j] & 4) == 0)) THEN GOTO L112;
+LET V31 = V31 + 790;
+LET A28[V31 - 1 - i] = 0;
+L112:
+LET V31 = V31 + 1;
+NEXT j;
+GOTO L117;
+L113:
+IF (V11 == 8192) THEN GOTO L116;
+LET i = V11 - 8193;
+FOR j = 0 TO V1;
+IF (((A17[j] & 2) == 0) ||
+((A17[j] & 4) == 0)) THEN GOTO L114;
+LET V31 = V31 + 790;
+LET A28[V31 - 1 - i] = 1;
+L114:
+LET V31 = V31 + 1;
+NEXT j;
+DRSCAN V17, A28[0..(V17 - 1)];
+LET V31 = 0;
+FOR j = 0 TO V1;
+IF (((A17[j] & 2) == 0) ||
+((A17[j] & 4) == 0)) THEN GOTO L115;
+LET V31 = V31 + 790;
+LET A28[V31 - 1 - i] = 0;
+L115:
+LET V31 = V31 + 1;
+NEXT j;
+GOTO L117;
+L116:
+DRSCAN V17, A28[0..(V17 - 1)];
+L117:
+LET A18[0..9] = 392;
+CALL L143;
+LET V10 = V11;
+RETURN;
+L121:
+LET V30 = V14;
+IF (V49) THEN CALL L152;
+LET V31 = V30 + (V23 - 1);
+IF ((V10 & 64512) == 0) THEN GOTO L122;
+IF ((V10 & 64512) == 1024) THEN GOTO L123;
+IF ((V10 & 64512) == 2048) THEN GOTO L125;
+IF ((V10 & 64512) == 4096) THEN GOTO L127;
+IF ((V10 & 64512) == 8192) THEN GOTO L128;
+L122:
+LET A18[0..9] = 006;
+CALL L143;
+LET A18[0..9] = 00A;
+CALL L143;
+LET V56 = 1;
+WAIT (V37 * 100) USEC;
+LET A18[0..9] = 392;
+CALL L143;
+GOTO L130;
+L123:
+IF (V10 > 1172) THEN GOTO L124;
+FOR i = 0 TO 4;
+LET j = 10 * i;
+LET A18[0..9] = A34[j..(j + 9)];
+PUSH i;
+CALL L143;
+POP i;
+DRSCAN V23, A23[V30..V31];
+LET V30 = V30 + V23;
+LET V31 = V31 + V23;
+NEXT i;
+LET A18[0..9] = 006;
+CALL L143;
+LET A18[0..9] = 00A;
+CALL L143;
+LET V56 = 1;
+WAIT (V37 * 100) USEC;
+LET A18[0..9] = 392;
+CALL L143;
+L124:
+IF (V10 < 1059) THEN GOTO L130;
+FOR i = 0 TO 4;
+LET j = 10 * i;
+LET A18[0..9] = A35[j..(j + 9)];
+PUSH i;
+CALL L143;
+POP i;
+DRSCAN V23, A23[V30..V31];
+LET V30 = V30 + V23;
+LET V31 = V31 + V23;
+NEXT i;
+LET A18[0..9] = 006;
+CALL L143;
+LET A18[0..9] = 00A;
+CALL L143;
+LET V56 = 1;
+WAIT (V37 * 100) USEC;
+LET A18[0..9] = 392;
+CALL L143;
+GOTO L130;
+L125:
+FOR i = 0 TO (V33 - 1);
+LET j = 10 * i;
+LET A18[0..9] = A38[j..(j + 9)];
+LET V57 = 1;
+FOR j = 0 TO V1;
+IF (((A17[j] & 2) == 0) ||
+((A17[j] & 4) == 0)) THEN GOTO L126;
+LET V2 = A12[j];
+IF (i >= A7[V2]) THEN
+LET A17[j] = A17[j] | 8;
+L126:
+NEXT j;
+PUSH i;
+CALL L143;
+DRSCAN V23, A23[V30..V31];
+LET V30 = V30 + V23;
+LET V31 = V31 + V23;
+LET A18[0..9] = 006;
+CALL L143;
+LET A18[0..9] = 00A;
+CALL L143;
+LET V56 = 1;
+WAIT (V37 * 100) USEC;
+LET A18[0..9] = 392;
+CALL L143;
+POP i;
+NEXT i;
+GOTO L130;
+L127:
+LET A20[0..9] = 032;
+GOTO L129;
+L128:
+LET A20[0..9] = 02E;
+L129:
+LET A18[0..9] = A20[0..9];
+CALL L143;
+DRSCAN V23, A23[V30..V31];
+LET V30 = V30 + V23;
+LET V31 = V31 + V23;
+LET A18[0..9] = 006;
+CALL L143;
+LET A18[0..9] = 00A;
+CALL L143;
+LET V56 = 1;
+WAIT (V37 * 100) USEC;
+LET A18[0..9] = 392;
+CALL L143;
+L130:
+LET V14 = V30;
+RETURN;
+L131:
+IF (DO_SECURE == 0) THEN GOTO L136;
+CALL L19;
+FOR i = 0 TO V1;
+IF (((A17[i] & V4) == 0) ||
+((A17[i] & 4) == 0)) THEN GOTO L132;
+IF ((A17[i] & 16) == 0) THEN
+LET A17[i] = A17[i] & ~4;
+IF ((A17[i] & 16) != 0) THEN
+LET V73 = 1;
+L132:
+NEXT i;
+IF (!DO_SECURE_ALL && (V73 == 0)) THEN
+GOTO L136;
+IF (DO_SECURE_ALL && (V73 == 0)) THEN
+GOTO L133;
+LET V11 = 0;
+CALL L100;
+CALL L121;
+L133:
+IF (!DO_SECURE_ALL) THEN GOTO L136;
+IF (DO_SECURE_ALL && (V73 == 0)) THEN
+LET A18[0..9] = 3FF;
+CALL L143;
+CALL L19;
+LET V73 = 0;
+FOR i = 0 TO V1;
+IF (((A17[i] & V4) == 0) ||
+((A17[i] & 4) == 0)) THEN GOTO L135;
+IF ((A17[i] & 16) != 0) THEN GOTO L134;
+LET A17[i] = A17[i] | 16;
+LET V73 = 1;
+GOTO L135;
+L134:
+LET A17[i] = A17[i] & ~16;
+LET A17[i] = A17[i] & ~4;
+L135:
+NEXT i;
+IF (V73 == 0) THEN GOTO L136;
+LET V11 = 0;
+CALL L100;
+CALL L121;
+L136:
+LET V73 = 0;
+RETURN;
+L142:
+LET V32 = 8983;
+RETURN;
+L143:
+LET V27 = 0;
+IF (!V56) THEN GOTO L144;
+LET V56 = 0;
+LET V27 = 50;
+LET A32[0..49] = A29[0..49];
+L144:
+FOR i = 0 TO V1;
+IF ((A17[i] & 8) != 0) THEN GOTO L145;
+IF (((A17[i] & V4) != 0) &&
+((A17[i] & 4) != 0)) THEN GOTO L146;
+LET A32[V27..(V27 + (A25[i] - 1))] = A39[0..(A25[i] - 1)];
+LET V27 = V27 + A25[i];
+GOTO L147;
+L145:
+IF (!V57) THEN GOTO L146;
+LET A32[V27..(V27 + 9)] = 02A;
+LET V27 = V27 + 10;
+GOTO L147;
+L146:
+LET A32[V27..(V27 + 9)] = A18[0..9];
+LET V27 = V27 + 10;
+L147:
+NEXT i;
+IRSCAN V27, A32[0..(V27 - 1)];
+LET V57 = 0;
+WAIT 5 USEC;
+STATE IDLE;
+WAIT 3 CYCLES;
+RETURN;
+L152:
+LET V23 = 0;
+LET V24 = 0;
+FOR i = 0 TO V1;
+LET V25 = 1;
+LET V26 = 1;
+IF (((A17[i] & 2) == 0) ||
+((A17[i] & 4) == 0)) THEN GOTO L153;
+LET V2 = A12[i];
+IF (((V10 >= 1035) && (V10 <= 1197)) ||
+(V10 == 0)) THEN
+CALL L155;
+IF ((V10 >= 2069) && (V10 <= 2074)) THEN
+CALL L156;
+IF (((V10 >= 4097) && (V10 <= 4114)) ||
+((V10 >= 4869) && (V10 <= 4886))) THEN
+CALL L157;
+IF (((V10 >= 8192) && (V10 <= 8210)) ||
+((V10 >= 8965) && (V10 <= 8982))) THEN
+CALL L158;
+GOTO L154;
+L153:
+IF (V72) THEN LET A30[V24] = 0;
+L154:
+LET V23 = V23 + V25;
+LET V24 = V24 + V26;
+NEXT i;
+LET V49 = 0;
+RETURN;
+L155:
+LET V25 = A1[V2];
+LET V26 = A5[V2];
+RETURN;
+L156:
+LET V25 = A2[V2];
+LET V26 = V25;
+RETURN;
+L157:
+LET V25 = A3[V2];
+LET V26 = V25;
+RETURN;
+L158:
+LET V25 = A4[V2];
+LET V26 = V25;
+RETURN;
+' END OF FILE
+CRC 8D6C;
