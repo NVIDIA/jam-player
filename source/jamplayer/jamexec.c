@@ -1967,7 +1967,7 @@ JAM_RETURN_TYPE jam_process_exit
 	*	(from -32767 to 32767) for compatibility with 16-bit systems.
 	*/
 	if ((status == JAMC_SUCCESS) &&
-		((exit_code_value < -32767L)) || (exit_code_value > 32767L))
+		(((exit_code_value < -32767L)) || (exit_code_value > 32767L)))
 	{
 		status = JAMC_INTEGER_OVERFLOW;
 	}

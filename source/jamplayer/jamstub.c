@@ -40,6 +40,7 @@
 #define PORT WINDOWS
 #endif
 
+#if PORT == WINDOWS
 #if ( _MSC_VER >= 800 )
 #pragma warning(disable:4115)
 #pragma warning(disable:4201)
@@ -48,16 +49,23 @@
 #endif
 
 #include <windows.h>
+#include <io.h>
+#include <conio.h>
+#endif
+
+#if PORT == OPENBMC_AST
+#include <unistd.h>
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <io.h>
 #include <malloc.h>
 #include <time.h>
-#include <conio.h>
 #include <ctype.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include "jamdefs.h"
 
 #if PORT == DOS
 #include <bios.h>
@@ -283,10 +291,12 @@ DWORD get_tick_count()
 
 void calibrate_delay()
 {
+#if PORT == WINDOWS || PORT == DOS
 	int sample = 0;
 	int count = 0;
 	DWORD tick_count1 = 0L;
 	DWORD tick_count2 = 0L;
+#endif
 
 	one_ms_delay = 0;
 
@@ -582,7 +592,7 @@ int main(int argc, char **argv)
 			}
 			else
 			{
-				printf("Unknown error code %ld\n", exec_result);
+				printf("Unknown error code %d\n", exec_result);
 			}
 
 			/*
@@ -874,8 +884,10 @@ void flush_ports(void)
 #endif /* PORT == WINDOWS */
 #endif /* PORT == WINDOWS || PORT == DOS */
 
+#if PORT == WINDOWS
 #if !defined (DEBUG)
 #pragma optimize ("ceglt", off)
+#endif
 #endif
 
 void delay_loop(int count)

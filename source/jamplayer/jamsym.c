@@ -45,7 +45,7 @@ JAM_RETURN_TYPE jam_init_symbol_table()
 	jam_symbol_table = (JAMS_SYMBOL_RECORD *) jam_workspace;
 
 	if (jam_workspace_size <
-		(JAMC_MAX_SYMBOL_COUNT * sizeof(JAMS_SYMBOL_RECORD)))
+		(long)(JAMC_MAX_SYMBOL_COUNT * sizeof(JAMS_SYMBOL_RECORD)))
 	{
 		status = JAMC_OUT_OF_MEMORY;
 	}

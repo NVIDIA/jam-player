@@ -11,18 +11,21 @@
 #ifndef INC_JAMDEFS_H
 #define INC_JAMDEFS_H
 
+#include <stdint.h>
 /****************************************************************************/
 /*																			*/
 /*	Constant definitions													*/
 /*																			*/
 /****************************************************************************/
 
+#ifndef NULL
 #define NULL (0)
+#endif
 #define EOF (-1)
 #define BOOL int
 #define TRUE 1
 #define FALSE 0
-
+typedef uint32_t DWORD;
 /* maximum quantities of some items */
 #define JAMC_MAX_SYMBOL_COUNT 1021	/* should be a prime number */
 #define JAMC_MAX_NESTING_DEPTH 16

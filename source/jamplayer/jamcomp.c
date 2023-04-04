@@ -135,7 +135,7 @@ long jam_uncompress
 	for (i = 0; i < out_length; ++i) out[i] = 0;
 
 	/* Read number of bytes in data. */
-	for (i = 0; i < sizeof (in_length); ++i) 
+	for (i = 0; i < (long) sizeof (in_length); ++i)
 	{
 		data_length = data_length | ((long) jam_read_packed(in, in_length, CHAR_BITS) << (long) (i * CHAR_BITS));
 	}

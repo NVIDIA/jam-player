@@ -1274,7 +1274,7 @@ int token = -1; /* input token */
 int errct = 0;  /* error count */
 int errfl = 0;  /* error flag */
 
-jam_yyparse()
+int jam_yyparse()
 { int jam_yys[YYMAXDEPTH];
   int jam_yyj, jam_yym;
   YYSTYPE *jam_yypvt;
