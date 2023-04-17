@@ -53,10 +53,6 @@
 #include <conio.h>
 #endif
 
-#if PORT == OPENBMC_AST
-#include <unistd.h>
-#endif
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -99,6 +95,21 @@
 char *file_buffer = NULL;
 long file_pointer = 0L;
 long file_length = 0L;
+#if PORT == OPENBMC_AST
+#include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
+#include "jtag.h"
+void printHelp()
+{
+	printf("Usage: jam [-h] [-v] [-d<var=val>] [-m<memsize>] [-j<jtagdevfile>] <filename>\n");
+}
+
+int device_fd;
+char *device_path;
+#endif
 
 /* delay count for one millisecond delay */
 int one_ms_delay = 0;
@@ -201,6 +212,26 @@ int jam_jtag_io(int tms_tdi)
 	write_byteblaster(0, data);
 
 	return (tdo);
+#elif PORT == OPENBMC_AST
+struct tck_bitbang data;
+struct bitbang_packet bb_packet;
+int tdi, tms;
+int tdo;
+
+tdi = tms_tdi & 1;
+tms = (tms_tdi >> 1) & 1;
+tdo = (tms_tdi >> 2) & 1;
+data.tdi = tdi;
+data.tms = tms;
+bb_packet.length = 1;
+bb_packet.data = &data;
+if (device_fd >= 0)
+	ioctl(device_fd, JTAG_IOCBITBANG, &bb_packet);
+
+if (tdo == 0)
+	return 0;
+return data.tdo;
+
 #else
 	tms_tdi = tms_tdi;
 
@@ -348,7 +379,6 @@ char *error_text[] =
 int main(int argc, char **argv)
 {
 	BOOL help = FALSE;
-	BOOL error = FALSE;
 	char *filename = NULL;
 	long offset = 0L;
 	long error_line = 0L;
@@ -359,7 +389,10 @@ int main(int argc, char **argv)
 	char key[33] = {0};
 	char value[257] = {0};
 	int exit_status = 0;
+#if PORT != OPENBMC_AST
+	BOOL error = FALSE;
 	int arg = 0;
+#endif
 	int exit_code = 0;
 	time_t start_time = 0;
 	time_t end_time = 0;
@@ -369,6 +402,7 @@ int main(int argc, char **argv)
 	int init_count = 0;
 	FILE *fp = NULL;
 	struct stat sbuf;
+	int c = 0;
 
 #if PORT == DOS
 	long workspace_size = 65500;	/* slightly less than 64 Kbytes */
@@ -382,7 +416,7 @@ int main(int argc, char **argv)
 
 	/* print out the version string and copyright message */
 	fprintf(stderr, "Jam Language Interpreter Version 1.0\nCopyright (C) 1997 Altera Corporation\n\n");
-
+#if PORT != OPENBMC_AST
 	for (arg = 1; arg < argc; arg++)
 	{
 #if PORT == UNIX
@@ -390,7 +424,7 @@ int main(int argc, char **argv)
 #else
 		if ((argv[arg][0] == '-') || (argv[arg][0] == '/'))
 #endif
-		{
+	it	{
 			switch(toupper(argv[arg][1]))
 			{
 			case 'D':				/* initialization list */
@@ -462,7 +496,41 @@ int main(int argc, char **argv)
 			error = FALSE;
 		}
 	}
+#else
 
+device_path = NULL;
+
+while ((c = getopt(argc, argv, "vm:d:j:h")) != -1) {
+	switch (c) {
+		case 'v':
+			verbose = TRUE;
+			break;
+		case 'm':
+			workspace_size = atoi(optarg);
+			break;
+		case 'd':
+			init_list[init_count] = optarg;
+			break;
+		case 'j':
+			device_path = optarg;
+			break;
+		case 'h':
+			printHelp();
+			break;
+		default:
+			printHelp();
+	}
+}
+
+if (!device_path) {
+	printf ("ast jtag device path must be present\n");
+	exit (1);
+}
+
+if (optind < argc)
+	filename = argv[optind];
+
+#endif //PORT != OPENBMC_AST
 	if (help || (filename == NULL))
 	{
 		printf("Usage: jam [-h] [-v] [-d<var=val>] [-p<port>] [-m<memsize>] <filename>\n");
@@ -619,7 +687,7 @@ int main(int argc, char **argv)
 	return (exit_status);
 }
 
-#if PORT == WINDOWS || PORT == DOS
+#if PORT == WINDOWS || PORT == DOS || PORT == OPENBMC_AST
 void initialize_jtag_hardware()
 {
 #if PORT == WINDOWS
@@ -631,7 +699,7 @@ void initialize_jtag_hardware()
 	{
 		lpt_addr = lpt_addr_table[lpt_port - 1];
 	}
-#else /* PORT == DOS */
+#elif PORT == DOS
 	/*
 	*	Read word at specific memory address to get the LPT port address
 	*/
@@ -648,16 +716,22 @@ void initialize_jtag_hardware()
 			lpt_addr = lpt_addr_table[lpt_port - 1];
 		}
 	}
+#elif PORT == OPENBMC_AST
+	device_fd = open(device_path, O_RDWR);
 #endif
 
+#if PORT != OPENBMC_AST
 	/* set AUTO-FEED low to enable ByteBlaster */
 	write_byteblaster(2, 0xea);
+#endif
 }
 
 void close_jtag_hardware()
 {
+#if PORT != OPENBMC_AST
 	/* set AUTO-FEED high to disable ByteBlaster */
 	write_byteblaster(2, 0xe8);
+#endif
 
 #if PORT == WINDOWS
 	if (windows_nt && (nt_device_handle != INVALID_HANDLE_VALUE))
@@ -666,6 +740,10 @@ void close_jtag_hardware()
 
 		CloseHandle(nt_device_handle);
 	}
+#endif
+#if PORT == OPENBMC_AST
+if (device_fd >=0)
+	close (device_fd);
 #endif
 }
 
@@ -732,6 +810,7 @@ BOOL initialize_nt_driver()
 }
 #endif
 
+#if PORT != OPENBMC_AST
 /**************************************************************************/
 /*                                                                        */
 
@@ -855,6 +934,7 @@ int read_byteblaster
 
 	return (data & 0xff);
 }
+#endif
 
 #if PORT == WINDOWS
 void flush_ports(void)
