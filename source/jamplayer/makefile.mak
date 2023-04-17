@@ -1,7 +1,7 @@
 #
 #	Module:			makefile
 #
-#					Copyright (C) Altera Corporation 1997
+#					Copyright (C) Altera Corporation 1997-1999
 #
 #	Description:	Makefile for JAM Interpreter
 #
@@ -20,19 +20,24 @@ OBJS = \
 	jamutil.obj \
 	jamexp.obj
 
+.c.obj :
+	cl /W4 /c /O2 /ML /DWINNT $<
+
 # LINK: add appropriate linker command here
 
 jam.exe : $(OBJS)
-	link $(OBJS) jam.exe
+	link $(OBJS) advapi32.lib /out:jam.exe
 
 # Dependencies:
 
 jamstub.obj : \
 	jamstub.c \
+	jamport.h \
 	jamexprt.h
 
 jamexec.obj : \
 	jamexec.c \
+	jamport.h \
 	jamexprt.h \
 	jamdefs.h \
 	jamexec.h \
@@ -76,6 +81,7 @@ jamstack.obj : \
 
 jamheap.obj : \
 	jamheap.c \
+	jamport.h \
 	jamexprt.h \
 	jamdefs.h \
 	jamsym.h \

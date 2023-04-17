@@ -6,6 +6,9 @@
 /*																			*/
 /*	Description:	JAM Interpreter Export Header File						*/
 /*																			*/
+/*	Revisions:		1.1 removed error code JAMC_UNSUPPORTED FEATURE, added	*/
+/*					JAMC_VECTOR_MAP_FAILED									*/
+/*																			*/
 /****************************************************************************/
 
 #ifndef INC_JAMEXPRT_H
@@ -37,7 +40,13 @@
 #define JAMC_POP_UNEXPECTED   15
 #define JAMC_RETURN_UNEXPECTED 16
 #define JAMC_ILLEGAL_SYMBOL   17
-#define JAMC_UNSUPPORTED_FEATURE 18
+#define JAMC_VECTOR_MAP_FAILED 18
+#define JAMC_USER_ABORT        19
+#define JAMC_STACK_OVERFLOW    20
+#define JAMC_ILLEGAL_OPCODE    21
+#define JAMC_PHASE_ERROR       22
+#define JAMC_SCOPE_ERROR       23
+#define JAMC_ACTION_NOT_FOUND  24
 
 /****************************************************************************/
 /*																			*/
@@ -47,15 +56,22 @@
 
 JAM_RETURN_TYPE jam_execute
 (
-	char **init_list,
+	char *program,
+	long program_size,
 	char *workspace,
-	long size,
+	long workspace_size,
+	char *action,
+	char **init_list,
+	int reset_jtag,
 	long *error_line,
-	int *exit_code
+	int *exit_code,
+	int *format_version
 );
 
 JAM_RETURN_TYPE jam_get_note
 (
+	char *program,
+	long program_size,
 	long *offset,
 	char *key,
 	char *value,
@@ -64,6 +80,8 @@ JAM_RETURN_TYPE jam_get_note
 
 JAM_RETURN_TYPE jam_check_crc
 (
+	char *program,
+	long program_size,
 	unsigned short *expected_crc,
 	unsigned short *actual_crc
 );
@@ -80,7 +98,9 @@ int jam_seek
 
 int jam_jtag_io
 (
-	int tms_tdi
+	int tms,
+	int tdi,
+	int read_tdo
 );
 
 void jam_message
@@ -88,10 +108,17 @@ void jam_message
 	char *message_text
 );
 
-void jam_export
+void jam_export_integer
 (
 	char *key,
 	long value
+);
+
+void jam_export_boolean_array
+(
+	char *key,
+	unsigned char *data,
+	long count
 );
 
 void jam_delay
@@ -111,6 +138,21 @@ int jam_vector_io
 	long *dir_vect,
 	long *data_vect,
 	long *capture_vect
+);
+
+int jam_set_frequency
+(
+	long hertz
+);
+
+void *jam_malloc
+(
+	unsigned int size
+);
+
+void jam_free
+(
+	void *ptr
 );
 
 #endif /* INC_JAMEXPRT_H */

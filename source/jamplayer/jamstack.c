@@ -6,6 +6,8 @@
 /*																			*/
 /*	Description:	Functions for maintaining the stack						*/
 /*																			*/
+/*	Revisions:		1.1 added support for dynamic memory allocation			*/
+/*																			*/
 /****************************************************************************/
 
 #include "jamexprt.h"
@@ -19,7 +21,7 @@ JAMS_STACK_RECORD *jam_stack = 0;
 /****************************************************************************/
 /*																			*/
 
-JAM_RETURN_TYPE jam_init_stack()
+JAM_RETURN_TYPE jam_init_stack(void)
 
 /*																			*/
 /*	Description:	Initialize the stack.  The stack is located after the	*/
@@ -32,18 +34,33 @@ JAM_RETURN_TYPE jam_init_stack()
 	int index = 0;
 	int size = 0;
 	JAM_RETURN_TYPE return_code = JAMC_SUCCESS;
-	JAMS_SYMBOL_RECORD *symbol_table = (JAMS_SYMBOL_RECORD *) jam_workspace;
+	void **symbol_table = NULL;
 
-	jam_stack = (JAMS_STACK_RECORD *) &symbol_table[JAMC_MAX_SYMBOL_COUNT];
-
-	size = (JAMC_MAX_SYMBOL_COUNT * sizeof(JAMS_SYMBOL_RECORD)) +
-		(JAMC_MAX_NESTING_DEPTH * sizeof(JAMS_STACK_RECORD));
-
-	if (jam_workspace_size < size)
+	if (jam_workspace != NULL)
 	{
-		return_code = JAMC_OUT_OF_MEMORY;
+		symbol_table = (void **) jam_workspace;
+		jam_stack = (JAMS_STACK_RECORD *) &symbol_table[JAMC_MAX_SYMBOL_COUNT];
+
+		size = (JAMC_MAX_SYMBOL_COUNT * sizeof(void *)) +
+			(JAMC_MAX_NESTING_DEPTH * sizeof(JAMS_STACK_RECORD));
+
+		if (jam_workspace_size < size)
+		{
+			return_code = JAMC_OUT_OF_MEMORY;
+		}
 	}
 	else
+	{
+		jam_stack = jam_malloc(
+			JAMC_MAX_NESTING_DEPTH * sizeof(JAMS_STACK_RECORD));
+
+		if (jam_stack == NULL)
+		{
+			return_code = JAMC_OUT_OF_MEMORY;
+		}
+	}
+
+	if (return_code == JAMC_SUCCESS)
 	{
 		for (index = 0; index < JAMC_MAX_NESTING_DEPTH; ++index)
 		{
@@ -58,6 +75,14 @@ JAM_RETURN_TYPE jam_init_stack()
 	}
 
 	return (return_code);
+}
+
+void jam_free_stack(void)
+{
+	if ((jam_stack != NULL) && (jam_workspace == NULL))
+	{
+		jam_free(jam_stack);
+	}
 }
 
 /****************************************************************************/
@@ -112,7 +137,7 @@ JAM_RETURN_TYPE jam_push_stack_record
 /****************************************************************************/
 /*																			*/
 
-JAMS_STACK_RECORD *jam_peek_stack_record()
+JAMS_STACK_RECORD *jam_peek_stack_record(void)
 
 /*																			*/
 /*	Description:	Finds the top of the stack								*/
@@ -145,7 +170,7 @@ JAMS_STACK_RECORD *jam_peek_stack_record()
 /****************************************************************************/
 /*																			*/
 
-JAM_RETURN_TYPE jam_pop_stack_record()
+JAM_RETURN_TYPE jam_pop_stack_record(void)
 
 /*																			*/
 /*	Description:	Deletes the top-most stack record from the stack		*/

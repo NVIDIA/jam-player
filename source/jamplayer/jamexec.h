@@ -23,11 +23,25 @@ extern long jam_current_statement_position;
 
 extern long jam_next_statement_position;
 
+extern unsigned int jam_statement_buffer_size;
+
 /****************************************************************************/
 /*																			*/
 /*	Function Prototypes														*/
 /*																			*/
 /****************************************************************************/
+
+JAM_RETURN_TYPE jam_init_statement_buffer
+(
+	char **statement_buffer,
+	unsigned int *statement_buffer_size
+);
+
+void jam_free_statement_buffer
+(
+	char **statement_buffer,
+	unsigned int *statement_buffer_size
+);
 
 JAM_RETURN_TYPE jam_get_statement
 (

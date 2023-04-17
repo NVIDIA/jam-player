@@ -6,6 +6,8 @@
 /*																			*/
 /*	Description:	Prototypes for symbol-table management functions		*/
 /*																			*/
+/*	Revisions:		1.1	added jam_free_symbol_table()						*/
+/*																			*/
 /****************************************************************************/
 
 #ifndef INC_JAMSYM_H
@@ -28,17 +30,21 @@ typedef enum
 	JAM_BOOLEAN_ARRAY_WRITABLE,
 	JAM_INTEGER_ARRAY_INITIALIZED,
 	JAM_BOOLEAN_ARRAY_INITIALIZED,
+	JAM_DATA_BLOCK,
+	JAM_PROCEDURE_BLOCK,
 	JAM_SYMBOL_MAX
 
 } JAME_SYMBOL_TYPE;
 
 /* symbol record structure */
-typedef struct
+typedef struct JAMS_SYMBOL_STRUCT
 {
 	char name[JAMC_MAX_NAME_LENGTH + 1];
 	JAME_SYMBOL_TYPE type;
 	long value;
 	long position;
+	struct JAMS_SYMBOL_STRUCT *parent;
+	struct JAMS_SYMBOL_STRUCT *next;
 
 } JAMS_SYMBOL_RECORD;
 
@@ -48,7 +54,13 @@ typedef struct
 /*																			*/
 /****************************************************************************/
 
-extern JAMS_SYMBOL_RECORD *jam_symbol_table;
+extern JAMS_SYMBOL_RECORD **jam_symbol_table;
+
+extern void *jam_symbol_bottom;
+
+extern JAMS_SYMBOL_RECORD *jam_current_block;
+
+extern int jam_version;
 
 /****************************************************************************/
 /*																			*/
@@ -57,6 +69,11 @@ extern JAMS_SYMBOL_RECORD *jam_symbol_table;
 /****************************************************************************/
 
 JAM_RETURN_TYPE jam_init_symbol_table
+(
+	void
+);
+
+void jam_free_symbol_table
 (
 	void
 );
@@ -83,9 +100,10 @@ JAM_RETURN_TYPE jam_set_symbol_value
 	long value
 );
 
-JAMS_SYMBOL_RECORD *jam_get_symbol_record
+JAM_RETURN_TYPE jam_get_symbol_record
 (
-	char *name
+	char *name,
+	JAMS_SYMBOL_RECORD **symbol_record
 );
 
 #endif /* INC_JAMSYM_H */

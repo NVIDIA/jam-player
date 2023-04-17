@@ -6,6 +6,8 @@
 /*																			*/
 /*	Description:	Prototypes for heap management functions				*/
 /*																			*/
+/*	Revisions:		1.1	added jam_free_heap() and jam_free_temp_workspace()	*/
+/*																			*/
 /****************************************************************************/
 
 #ifndef INC_JAMHEAP_H
@@ -61,6 +63,8 @@ typedef struct JAMS_HEAP_STRUCT
 
 extern JAMS_HEAP_RECORD *jam_heap;
 
+extern void *jam_heap_top;
+
 /****************************************************************************/
 /*																			*/
 /*	Function prototypes														*/
@@ -72,6 +76,11 @@ JAM_RETURN_TYPE jam_init_heap
 	void
 );
 
+void jam_free_heap
+(
+	void
+);
+
 JAM_RETURN_TYPE jam_add_heap_record
 (
 	JAMS_SYMBOL_RECORD *symbol_record,
@@ -79,9 +88,14 @@ JAM_RETURN_TYPE jam_add_heap_record
 	long dimension
 );
 
-long jam_get_temp_workspace
+void *jam_get_temp_workspace
 (
-	char **ptr
+	long size
+);
+
+void jam_free_temp_workspace
+(
+	void *ptr
 );
 
 #endif /* INC_JAMHEAP_H */

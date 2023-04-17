@@ -53,6 +53,11 @@ typedef enum
 /*																			*/
 /****************************************************************************/
 
+JAM_RETURN_TYPE jam_init_jtag
+(
+	void
+);
+
 JAME_JTAG_STATE jam_get_jtag_state_from_name
 (
 	char *name
@@ -68,12 +73,32 @@ JAM_RETURN_TYPE jam_set_irstop_state
 	JAME_JTAG_STATE state
 );
 
-JAM_RETURN_TYPE jam_set_jtag_padding
+JAM_RETURN_TYPE jam_set_dr_preamble
 (
-	int dr_preamble,
-	int dr_postamble,
-	int ir_preamble,
-	int ir_postamble
+	int count,
+	int start_index,
+	long *data
+);
+
+JAM_RETURN_TYPE jam_set_ir_preamble
+(
+	int count,
+	int start_index,
+	long *data
+);
+
+JAM_RETURN_TYPE jam_set_dr_postamble
+(
+	int count,
+	int start_index,
+	long *data
+);
+
+JAM_RETURN_TYPE jam_set_ir_postamble
+(
+	int count,
+	int start_index,
+	long *data
 );
 
 JAM_RETURN_TYPE jam_goto_jtag_state
@@ -100,6 +125,15 @@ JAM_RETURN_TYPE jam_do_irscan
 	long start_index
 );
 
+JAM_RETURN_TYPE jam_swap_ir
+(
+	long count,
+	long *in_data,
+	long in_index,
+	long *out_data,
+	long out_index
+);
+
 JAM_RETURN_TYPE jam_do_drscan
 (
 	long count,
@@ -114,6 +148,11 @@ JAM_RETURN_TYPE jam_swap_dr
 	long in_index,
 	long *out_data,
 	long out_index
+);
+
+void jam_free_jtag_padding_buffers
+(
+	int reset_jtag
 );
 
 #endif /* INC_JAMJTAG_H */

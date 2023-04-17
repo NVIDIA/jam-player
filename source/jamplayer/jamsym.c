@@ -8,6 +8,11 @@
 /*					adding a synbol, searching for a symbol, and			*/
 /*					modifying the value associated with a symbol			*/
 /*																			*/
+/*	Revisions:		1.1 added support for dynamic memory allocation, made	*/
+/*					jam_symbol_table a pointer table instead of a table of	*/
+/*					structures.  Actual symbols now live at the top of the	*/
+/*					workspace, and grow dynamically downwards in memory.	*/
+/*																			*/
 /****************************************************************************/
 
 #include "jamexprt.h"
@@ -22,7 +27,11 @@
 /*																			*/
 /****************************************************************************/
 
-JAMS_SYMBOL_RECORD *jam_symbol_table = NULL;
+JAMS_SYMBOL_RECORD **jam_symbol_table = NULL;
+
+void *jam_symbol_bottom = NULL;
+
+extern BOOL jam_checking_uses_list;
 
 /****************************************************************************/
 /*																			*/
@@ -42,25 +51,62 @@ JAM_RETURN_TYPE jam_init_symbol_table()
 	int index = 0;
 	JAM_RETURN_TYPE status = JAMC_SUCCESS;
 
-	jam_symbol_table = (JAMS_SYMBOL_RECORD *) jam_workspace;
-
-	if (jam_workspace_size <
-		(long)(JAMC_MAX_SYMBOL_COUNT * sizeof(JAMS_SYMBOL_RECORD)))
+	if (jam_workspace != NULL)
 	{
-		status = JAMC_OUT_OF_MEMORY;
+		jam_symbol_table = (JAMS_SYMBOL_RECORD **) jam_workspace;
+
+		jam_symbol_bottom = (void *) (((long)jam_workspace) +
+			((long)jam_workspace_size));
+
+		if (jam_workspace_size <
+			(JAMC_MAX_SYMBOL_COUNT * sizeof(void *)))
+		{
+			status = JAMC_OUT_OF_MEMORY;
+		}
 	}
 	else
 	{
+		jam_symbol_table = (JAMS_SYMBOL_RECORD **) jam_malloc(
+			(JAMC_MAX_SYMBOL_COUNT * sizeof(void *)));
+
+		if (jam_symbol_table == NULL)
+		{
+			status = JAMC_OUT_OF_MEMORY;
+		}
+	}
+
+	if (status == JAMC_SUCCESS)
+	{
 		for (index = 0; index < JAMC_MAX_SYMBOL_COUNT; ++index)
 		{
-			jam_symbol_table[index].type = JAM_ILLEGAL_SYMBOL_TYPE;
-			jam_symbol_table[index].name[0] = '\0';
-			jam_symbol_table[index].value = 0L;
-			jam_symbol_table[index].position = 0L;
+			jam_symbol_table[index] = NULL;
 		}
 	}
 
 	return (status);
+}
+
+void jam_free_symbol_table()
+{
+	int hash = 0;
+	JAMS_SYMBOL_RECORD *symbol_record = NULL;
+	JAMS_SYMBOL_RECORD *next = NULL;
+
+	if ((jam_symbol_table != NULL) && (jam_workspace == NULL))
+	{
+		for (hash = 0; hash < JAMC_MAX_SYMBOL_COUNT; ++hash)
+		{
+			symbol_record = jam_symbol_table[hash];
+			while (symbol_record != NULL)
+			{
+				next = symbol_record->next;
+				jam_free(symbol_record);
+				symbol_record = next;
+			}
+		}
+
+		jam_free(jam_symbol_table);
+	}
 }
 
 /****************************************************************************/
@@ -203,13 +249,14 @@ JAM_RETURN_TYPE jam_add_symbol
 /****************************************************************************/
 {
 	char r, l;
-	int sym_index = 0;
 	int ch_index = 0;
 	int hash = 0;
 	long init_list_value = 0L;
 	BOOL match = FALSE;
 	BOOL identical_redeclaration = FALSE;
 	JAM_RETURN_TYPE status = JAMC_SUCCESS;
+	JAMS_SYMBOL_RECORD *symbol_record = NULL;
+	JAMS_SYMBOL_RECORD *prev_symbol_record = NULL;
 
 	/*
 	*	Check for legal characters in name, and legal name length
@@ -228,20 +275,23 @@ JAM_RETURN_TYPE jam_add_symbol
 	*	Get hash key for this name
 	*/
 	hash = jam_hash(name);
-	sym_index = hash;
+
+	/*
+	*	Get pointer to first symbol record corresponding to this hash key
+	*/
+	symbol_record = jam_symbol_table[hash];
 
 	/*
 	*	Then check for duplicate entry in symbol table
 	*/
-	while ((status == JAMC_SUCCESS) &&
-		(jam_symbol_table[sym_index].type != JAM_ILLEGAL_SYMBOL_TYPE) &&
+	while ((status == JAMC_SUCCESS) && (symbol_record != NULL) &&
 		(!identical_redeclaration))
 	{
 		match = TRUE;
 		ch_index = 0;
 		do
 		{
-			r = jam_symbol_table[sym_index].name[ch_index];
+			r = symbol_record->name[ch_index];
 			l = name[ch_index];
 			match = (r == l);
 			++ch_index;
@@ -254,14 +304,44 @@ JAM_RETURN_TYPE jam_add_symbol
 			*	Check if symbol was already declared identically
 			*	(same name, type, and source position)
 			*/
-			if ((jam_symbol_table[sym_index].type == type) &&
-				(jam_symbol_table[sym_index].position == position))
+			if ((symbol_record->position == position) &&
+				(jam_phase == JAM_DATA_PHASE))
+			{
+				if ((type == JAM_INTEGER_ARRAY_WRITABLE) &&
+					(symbol_record->type == JAM_INTEGER_ARRAY_INITIALIZED))
+				{
+					type = JAM_INTEGER_ARRAY_INITIALIZED;
+				}
+
+				if ((type == JAM_BOOLEAN_ARRAY_WRITABLE) &&
+					(symbol_record->type == JAM_BOOLEAN_ARRAY_INITIALIZED))
+				{
+					type = JAM_BOOLEAN_ARRAY_INITIALIZED;
+				}
+			}
+
+			if ((symbol_record->type == type) &&
+				(symbol_record->position == position))
 			{
 				/*
 				*	For identical redeclaration, simply assign the value
 				*/
 				identical_redeclaration = TRUE;
-				jam_symbol_table[sym_index].value = value;
+
+				if (jam_version != 2)
+				{
+					symbol_record->value = value;
+				}
+				else
+				{
+					if ((type != JAM_PROCEDURE_BLOCK) &&
+						(type != JAM_DATA_BLOCK) &&
+						(jam_current_block != NULL) &&
+						(jam_current_block->type == JAM_PROCEDURE_BLOCK))
+					{
+						symbol_record->value = value;
+					}
+				}
 			}
 			else
 			{
@@ -269,28 +349,14 @@ JAM_RETURN_TYPE jam_add_symbol
 			}
 		}
 
-		/*
-		*	If position is occupied, look at next position
-		*/
-		if ((status == JAMC_SUCCESS) &&
-			(jam_symbol_table[sym_index].type != JAM_ILLEGAL_SYMBOL_TYPE))
-		{
-			++sym_index;
-			if (sym_index >= JAMC_MAX_SYMBOL_COUNT) sym_index = 0;
-
-			if ((status == JAMC_SUCCESS) && (sym_index == hash))
-			{
-				/* the symbol is not in the table, and the table is full */
-				status = JAMC_OUT_OF_MEMORY;
-			}
-		}
+		prev_symbol_record = symbol_record;
+		symbol_record = symbol_record->next;
 	}
 
 	/*
 	*	If no duplicate entry found, add the symbol
 	*/
-	if ((status == JAMC_SUCCESS) &&
-		(jam_symbol_table[sym_index].type == JAM_ILLEGAL_SYMBOL_TYPE) &&
+	if ((status == JAMC_SUCCESS) && (symbol_record == NULL) &&
 		(!identical_redeclaration))
 	{
 		/*
@@ -300,7 +366,8 @@ JAM_RETURN_TYPE jam_add_symbol
 		if (((type == JAM_INTEGER_SYMBOL) || (type == JAM_BOOLEAN_SYMBOL)) &&
 			(jam_init_list != NULL))
 		{
-			if (jam_check_init_list(name, &init_list_value))
+			if ((jam_version != 2) &&
+				jam_check_init_list(name, &init_list_value))
 			{
 				/* value was found -- override old value */
 				value = init_list_value;
@@ -310,18 +377,55 @@ JAM_RETURN_TYPE jam_add_symbol
 		/*
 		*	Add the symbol
 		*/
-		jam_symbol_table[sym_index].type = type;
-		jam_symbol_table[sym_index].value = value;
-		jam_symbol_table[sym_index].position = position;
-
-		ch_index = 0;
-		while ((ch_index < JAMC_MAX_NAME_LENGTH) &&
-			(name[ch_index] != '\0'))
+		if (jam_workspace != NULL)
 		{
-			jam_symbol_table[sym_index].name[ch_index] = name[ch_index];
-			++ch_index;
+			jam_symbol_bottom = (void *)
+				(((long)jam_symbol_bottom) - sizeof(JAMS_SYMBOL_RECORD));
+
+			symbol_record = (JAMS_SYMBOL_RECORD *) jam_symbol_bottom;
+
+			if ((long)jam_heap_top > (long)jam_symbol_bottom)
+			{
+				status = JAMC_OUT_OF_MEMORY;
+			}
 		}
-		jam_symbol_table[sym_index].name[ch_index] = '\0';
+		else
+		{
+			symbol_record = (JAMS_SYMBOL_RECORD *)
+				jam_malloc(sizeof(JAMS_SYMBOL_RECORD));
+
+			if (symbol_record == NULL)
+			{
+				status = JAMC_OUT_OF_MEMORY;
+			}
+		}
+
+		if (status == JAMC_SUCCESS)
+		{
+			symbol_record->type = type;
+			symbol_record->value = value;
+			symbol_record->position = position;
+			symbol_record->parent = jam_current_block;
+			symbol_record->next = NULL;
+
+			if (prev_symbol_record == NULL)
+			{
+				jam_symbol_table[hash] = symbol_record;
+			}
+			else
+			{
+				prev_symbol_record->next = symbol_record;
+			}
+
+			ch_index = 0;
+			while ((ch_index < JAMC_MAX_NAME_LENGTH) &&
+				(name[ch_index] != '\0'))
+			{
+				symbol_record->name[ch_index] = name[ch_index];
+				++ch_index;
+			}
+			symbol_record->name[ch_index] = '\0';
+		}
 	}
 
 	return (status);
@@ -330,9 +434,10 @@ JAM_RETURN_TYPE jam_add_symbol
 /****************************************************************************/
 /*																			*/
 
-JAMS_SYMBOL_RECORD *jam_get_symbol_record
+JAM_RETURN_TYPE jam_get_symbol_record
 (
-	char *name
+	char *name,
+	JAMS_SYMBOL_RECORD **symbol_record
 )
 
 /*																			*/
@@ -344,30 +449,35 @@ JAMS_SYMBOL_RECORD *jam_get_symbol_record
 /****************************************************************************/
 {
 	char r, l;
-	int sym_index = 0;
+	char save_ch = 0;
 	int ch_index = 0;
 	int hash = 0;
+	int name_begin = 0;
+	int name_end = 0;
 	BOOL match = FALSE;
-	BOOL done = FALSE;
-	JAMS_SYMBOL_RECORD *symbol_record = NULL;
+	JAMS_SYMBOL_RECORD *tmp_symbol_record = NULL;
+	JAM_RETURN_TYPE status = JAMC_UNDEFINED_SYMBOL;
 
 	/*
 	*	Get hash key for this name
 	*/
 	hash = jam_hash(name);
-	sym_index = hash;
+
+	/*
+	*	Get pointer to first symbol record corresponding to this hash key
+	*/
+	tmp_symbol_record = jam_symbol_table[hash];
 
 	/*
 	*	Search for name in symbol table
 	*/
-	while ((!done) && (symbol_record == NULL) &&
-		(jam_symbol_table[sym_index].type != JAM_ILLEGAL_SYMBOL_TYPE))
+	while ((!match) && (tmp_symbol_record != NULL))
 	{
 		match = TRUE;
 		ch_index = 0;
 		do
 		{
-			r = jam_symbol_table[sym_index].name[ch_index];
+			r = tmp_symbol_record->name[ch_index];
 			l = name[ch_index];
 			match = (r == l);
 			++ch_index;
@@ -376,16 +486,117 @@ JAMS_SYMBOL_RECORD *jam_get_symbol_record
 
 		if (match)
 		{
-			symbol_record = &jam_symbol_table[sym_index];
+			status = JAMC_SUCCESS;
 		}
-
-		++sym_index;
-		if (sym_index >= JAMC_MAX_SYMBOL_COUNT) sym_index = 0;
-
-		if ((!match) && (sym_index == hash)) done = TRUE;
+		else
+		{
+			tmp_symbol_record = tmp_symbol_record->next;
+		}
 	}
 
-	return (symbol_record);
+	/*
+	*	For Jam version 2, check that symbol is in scope
+	*/
+	if ((status == JAMC_SUCCESS) && (jam_version == 2))
+	{
+		if (jam_checking_uses_list &&
+			((tmp_symbol_record->type == JAM_PROCEDURE_BLOCK) ||
+			(tmp_symbol_record->type == JAM_DATA_BLOCK)))
+		{
+			/* ignore scope rules when validating USES list */
+			status = JAMC_SUCCESS;
+		}
+		else
+		if ((tmp_symbol_record->parent != NULL) &&
+			(tmp_symbol_record->parent != jam_current_block) &&
+			(tmp_symbol_record != jam_current_block))
+		{
+			JAMS_SYMBOL_RECORD *parent = tmp_symbol_record->parent;
+			JAMS_HEAP_RECORD *heap_record = NULL;
+			char *parent_name = NULL;
+			char *uses_list = NULL;
+
+			status = JAMC_SCOPE_ERROR;
+
+			/*
+			*	If the symbol in question is a procedure name, check that IT
+			*	itself is in the uses list, instead of looking for its parent
+			*/
+			if (tmp_symbol_record->type == JAM_PROCEDURE_BLOCK)
+			{
+				parent = tmp_symbol_record;
+			}
+
+			if (parent != NULL)
+			{
+				parent_name = parent->name;
+			}
+
+			if ((jam_current_block != NULL) &&
+				(jam_current_block->type == JAM_PROCEDURE_BLOCK))
+			{
+				heap_record = (JAMS_HEAP_RECORD *) jam_current_block->value;
+
+				if (heap_record != NULL)
+				{
+					uses_list = (char *) heap_record->data;
+				}
+			}
+
+			if ((uses_list != NULL) && (parent_name != NULL))
+			{
+				name_begin = 0;
+				ch_index = 0;
+				while ((uses_list[ch_index] != JAMC_NULL_CHAR) &&
+					(status != JAMC_SUCCESS))
+				{
+					name_end = 0;
+					while ((uses_list[ch_index] != JAMC_NULL_CHAR) &&
+						(!jam_is_name_char(uses_list[ch_index])))
+					{
+						++ch_index;
+					}
+					if (jam_is_name_char(uses_list[ch_index]))
+					{
+						name_begin = ch_index;
+					}
+					while ((uses_list[ch_index] != JAMC_NULL_CHAR) &&
+						(jam_is_name_char(uses_list[ch_index])))
+					{
+						++ch_index;
+					}
+					name_end = ch_index;
+
+					if (name_end > name_begin)
+					{
+						save_ch = uses_list[name_end];
+						uses_list[name_end] = JAMC_NULL_CHAR;
+						if (jam_strcmp(&uses_list[name_begin],
+							parent_name) == 0)
+						{
+							/* symbol is in scope */
+							status = JAMC_SUCCESS;
+						}
+						uses_list[name_end] = save_ch;
+					}
+				}
+			}
+		}
+	}
+
+	if (status == JAMC_SUCCESS)
+	{
+		if (symbol_record == NULL)
+		{
+			status = JAMC_INTERNAL_ERROR;
+		}
+		else
+		{
+			*symbol_record = tmp_symbol_record;
+		}
+	}
+
+	return (status);
 }
 
 /****************************************************************************/
@@ -407,55 +618,31 @@ JAM_RETURN_TYPE jam_get_symbol_value
 /*																			*/
 /****************************************************************************/
 {
-	char r, l;
-	int sym_index = 0;
-	int ch_index = 0;
-	int hash = 0;
-	BOOL match = FALSE;
-	BOOL done = FALSE;
 	JAM_RETURN_TYPE status = JAMC_UNDEFINED_SYMBOL;
+	JAMS_SYMBOL_RECORD *symbol_record = NULL;
 
-	/*
-	*	Get hash key for this name
-	*/
-	hash = jam_hash(name);
-	sym_index = hash;
+	status = jam_get_symbol_record(name, &symbol_record);
 
-	/*
-	*	Search for matching entry in symbol table
-	*/
-	while ((!match) && (!done) &&
-		(jam_symbol_table[sym_index].type != JAM_ILLEGAL_SYMBOL_TYPE))
+	if ((status == JAMC_SUCCESS) && (symbol_record != NULL))
 	{
-		/* check for matching type... */
-		if (jam_symbol_table[sym_index].type == type)
-		{
-			/* if type matches, check the name */
-			match = TRUE;
-			ch_index = 0;
-			do
-			{
-				r = jam_symbol_table[sym_index].name[ch_index];
-				l = name[ch_index];
-				match = (r == l);
-				++ch_index;
-			}
-			while (match && (r != '\0') && (l != '\0'));
-		}
-
 		/*
 		*	If type and name match, return the value
 		*/
-		if (match)
+		if (symbol_record->type == type)
 		{
-			if (value != 0) *value = jam_symbol_table[sym_index].value;
-			status = JAMC_SUCCESS;
+			if (value != NULL)
+			{
+				*value = symbol_record->value;
+			}
+			else
+			{
+				status = JAMC_INTERNAL_ERROR;
+			}
 		}
-
-		++sym_index;
-		if (sym_index >= JAMC_MAX_SYMBOL_COUNT) sym_index = 0;
-
-		if ((!match) && (sym_index == hash)) done = TRUE;
+		else
+		{
+			status = JAMC_TYPE_MISMATCH;
+		}
 	}
 
 	return (status);
@@ -480,55 +667,22 @@ JAM_RETURN_TYPE jam_set_symbol_value
 /*																			*/
 /****************************************************************************/
 {
-	char r, l;
-	int sym_index = 0;
-	int ch_index = 0;
-	int hash = 0;
-	BOOL match = FALSE;
-	BOOL done = FALSE;
 	JAM_RETURN_TYPE status = JAMC_UNDEFINED_SYMBOL;
+	JAMS_SYMBOL_RECORD *symbol_record = NULL;
 
-	/*
-	*	Get hash key for this name
-	*/
-	hash = jam_hash(name);
-	sym_index = hash;
+	status = jam_get_symbol_record(name, &symbol_record);
 
-	/*
-	*	Search for matching entry in symbol table
-	*/
-	while ((!match) && (!done) &&
-		(jam_symbol_table[sym_index].type != JAM_ILLEGAL_SYMBOL_TYPE))
+	if ((status == JAMC_SUCCESS) && (symbol_record != NULL))
 	{
 		/* check for matching type... */
-		if (jam_symbol_table[sym_index].type == type)
+		if (symbol_record->type == type)
 		{
-			/* if type matches, check the name */
-			match = TRUE;
-			ch_index = 0;
-			do
-			{
-				r = jam_symbol_table[sym_index].name[ch_index];
-				l = name[ch_index];
-				match = (r == l);
-				++ch_index;
-			}
-			while (match && (r != '\0') && (l != '\0'));
+			symbol_record->value = value;
 		}
-
-		/*
-		*	If type and name match, set the value
-		*/
-		if (match)
+		else
 		{
-			jam_symbol_table[sym_index].value = value;
-			status = JAMC_SUCCESS;
+			status = JAMC_TYPE_MISMATCH;
 		}
-
-		++sym_index;
-		if (sym_index >= JAMC_MAX_SYMBOL_COUNT) sym_index = 0;
-
-		if ((!match) && (sym_index == hash)) done = TRUE;
 	}
 
 	return (status);

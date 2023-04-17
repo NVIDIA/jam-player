@@ -17,7 +17,8 @@ long jam_uncompress
 	char *in, 
 	long in_length, 
 	char *out, 
-	long out_length
+	long out_length,
+	int version
 );
 
 #endif /* INC_JAMCOMP_H */

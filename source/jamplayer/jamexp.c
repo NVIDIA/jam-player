@@ -51,7 +51,7 @@
 /*																			*/
 /****************************************************************************/
 
-#define	MAX_BUFFER_LENGTH	256
+#define	MAX_BUFFER_LENGTH	1024
 #define END_OF_STRING		-1
 
 #define BOOL int
@@ -131,9 +131,11 @@ struct {
 	{ "<=",		2,	LESS_OR_EQ_TOK },
 	{ "<<",		2,	LEFT_SHIFT_TOK },
 	{ ">>",		2,	RIGHT_SHIFT_TOK },
+	{ "..",		2,	DOT_DOT_TOK },
 	{ "OR",		2,	OR_TOK },
 	{ "AND",	3,	AND_TOK },
 	{ "ABS",	3,	ABS_TOK },
+	{ "INT",	3,	INT_TOK },
 	{ "LOG2",	4,	LOG2_TOK },
 	{ "SQRT",	4,	SQRT_TOK },
 	{ "CEIL",	4,	CIEL_TOK },
@@ -150,6 +152,8 @@ char		jam_token_buffer[MAX_BUFFER_LENGTH];
 int			jam_token_buffer_index;
 char		jam_parse_string[MAX_BUFFER_LENGTH];
 long		jam_parse_value = 0;
+int			jam_expression_type = 0;
+JAMS_SYMBOL_RECORD *jam_array_symbol_rec = NULL;
 
 #define YYMAXDEPTH 300  /* This fixes a stack depth problem on  */
                         /* all platforms.                       */
@@ -175,6 +179,7 @@ enum OPERATOR_TYPE
 	BITWISE_XOR,
 	LEFT_SHIFT,
 	RIGHT_SHIFT,
+	DOT_DOT,
 	EQUALITY,
 	INEQUALITY,
 	GREATER_THAN,
@@ -182,11 +187,16 @@ enum OPERATOR_TYPE
 	GREATER_OR_EQUAL,
 	LESS_OR_EQUAL,
 	ABS,
+	INT,
 	LOG2,
 	SQRT,
 	CIEL,
 	FLOOR,
-	ARRAY
+	ARRAY,
+	POUND,
+	DOLLAR,
+	ARRAY_RANGE,
+	ARRAY_ALL
 };
 
 typedef enum OPERATOR_TYPE OPERATOR_TYPE;
@@ -214,7 +224,8 @@ JAME_EXPRESSION_TYPE jam_expr_type = JAM_ILLEGAL_EXPR_TYPE;
 
 /* --- FUNCTION PROTOTYPES -------------------------------------------- */
 
-int jam_yyparse();
+int jam_yyparse(void);
+int jam_yylex(void);
 
 #define AND_TOK 257
 #define OR_TOK 258
@@ -226,24 +237,26 @@ int jam_yyparse();
 #define LESS_OR_EQ_TOK 264
 #define LEFT_SHIFT_TOK 265
 #define RIGHT_SHIFT_TOK 266
-#define ABS_TOK 267
-#define LOG2_TOK 268
-#define SQRT_TOK 269
-#define CIEL_TOK 270
-#define FLOOR_TOK 271
-#define VALUE_TOK 272
-#define IDENTIFIER_TOK 273
-#define ARRAY_TOK 274
-#define ERROR_TOK 275
-#define UNARY_MINUS 276
-#define UNARY_PLUS 277
+#define DOT_DOT_TOK 267
+#define ABS_TOK 268
+#define INT_TOK 269
+#define LOG2_TOK 270
+#define SQRT_TOK 271
+#define CIEL_TOK 272
+#define FLOOR_TOK 273
+#define VALUE_TOK 274
+#define IDENTIFIER_TOK 275
+#define ARRAY_TOK 276
+#define ERROR_TOK 277
+#define UNARY_MINUS 278
+#define UNARY_PLUS 279
 #ifndef YYSTYPE
 #define YYSTYPE int
 #endif
 YYSTYPE jam_yylval, jam_yyval;
 #define YYERRCODE 256
 
-/* # line 311 "jamexp.y" */
+/* # line 333 "jamexp.y" */
 
 
 
@@ -320,6 +333,27 @@ long jam_square_root(long num)
 	return (sqrt);
 }
 
+/*
+*	Used by INT() function to convert Boolean array data to integer.  "msb"
+*	is the index of the most significant bit of the array, and "lsb" is the
+*	index of the least significant bit.  Typically msb > lsb, otherwise the
+*	bit order will be reversed when converted into integer format.
+*/
+long jam_convert_bool_to_int(long *data, long msb, long lsb)
+{
+	long i, increment = (msb > lsb) ? 1 : -1;
+	long mask = 1L, result = 0L;
+
+	msb += increment;
+	for (i = lsb; i != msb; i += increment)
+	{
+		if (data[i >> 5] & (1L << (i & 0x1f))) result |= mask;
+		mask <<= 1;
+	}
+
+	return (result);
+}
+
 
 /************************************************************************/
 /*																   		*/
@@ -345,6 +379,7 @@ YYSTYPE jam_exp_eval(OPERATOR_TYPE otype, YYSTYPE op1, YYSTYPE op2)
 	YYSTYPE rtn;
 	long	tmp_val;
 	JAMS_SYMBOL_RECORD *symbol_rec;
+	JAMS_HEAP_RECORD *heap_rec;
 
 	rtn.child_otype = 0;
 	rtn.type = JAM_ILLEGAL_EXPR_TYPE;
@@ -617,6 +652,11 @@ YYSTYPE jam_exp_eval(OPERATOR_TYPE otype, YYSTYPE op1, YYSTYPE op2)
 			else jam_return_code = JAMC_TYPE_MISMATCH;
 			break;
 
+		case INT:
+			rtn.val = op1.val;
+			rtn.type = JAM_INTEGER_EXPR;
+			break;
+
 		case LOG2:
 			if ((op1.type == JAM_INTEGER_EXPR) ||
 				(op1.type == JAM_INT_OR_BOOL_EXPR))
@@ -760,6 +800,63 @@ YYSTYPE jam_exp_eval(OPERATOR_TYPE otype, YYSTYPE op1, YYSTYPE op2)
 			else jam_return_code = JAMC_TYPE_MISMATCH;
 			break;
 
+		case POUND:
+			rtn.val = op1.val;
+			rtn.type = JAM_INTEGER_EXPR;
+			break;
+
+		case DOLLAR:
+			rtn.val = op1.val;
+			rtn.type = JAM_INTEGER_EXPR;
+			break;
+
+		case ARRAY_RANGE:
+			if (((op1.type == JAM_INTEGER_EXPR) || (op1.type == JAM_INT_OR_BOOL_EXPR)) &&
+				((op2.type == JAM_INTEGER_EXPR) || (op2.type == JAM_INT_OR_BOOL_EXPR)))
+			{
+				symbol_rec = jam_array_symbol_rec;
+
+				if ((symbol_rec != NULL) &&
+					((symbol_rec->type == JAM_BOOLEAN_ARRAY_WRITABLE) ||
+					(symbol_rec->type == JAM_BOOLEAN_ARRAY_INITIALIZED)))
+				{
+					heap_rec = (JAMS_HEAP_RECORD *) symbol_rec->value;
+
+					if (heap_rec != NULL)
+					{
+						rtn.val = jam_convert_bool_to_int(heap_rec->data,
+							op1.val, op2.val);
+					}
+					rtn.type = JAM_INTEGER_EXPR;
+				}
+				else jam_return_code = JAMC_TYPE_MISMATCH;
+			}
+			else jam_return_code = JAMC_TYPE_MISMATCH;
+			break;
+
+		case ARRAY_ALL:
+			if (op1.type == JAM_ARRAY_REFERENCE)
+			{
+				symbol_rec = (JAMS_SYMBOL_RECORD *)op1.val;
+
+				if ((symbol_rec != NULL) &&
+					((symbol_rec->type == JAM_BOOLEAN_ARRAY_WRITABLE) ||
+					(symbol_rec->type == JAM_BOOLEAN_ARRAY_INITIALIZED)))
+				{
+					heap_rec = (JAMS_HEAP_RECORD *) symbol_rec->value;
+
+					if (heap_rec != NULL)
+					{
+						rtn.val = jam_convert_bool_to_int(heap_rec->data,
+							heap_rec->dimension - 1, 0);
+					}
+					rtn.type = JAM_INTEGER_EXPR;
+				}
+				else jam_return_code = JAMC_TYPE_MISMATCH;
+			}
+			else jam_return_code = JAMC_TYPE_MISMATCH;
+			break;
+
 		default:
 			jam_return_code = JAMC_INTERNAL_ERROR;
 			break;
@@ -858,6 +955,16 @@ void jam_exp_lexer (void)
 				ACCEPT(LESS_TOK)
 			}
 		}
+		else if (CH == '.')
+		{
+			GET_NEXT_CH;
+			if (CH == '.') ACCEPT(DOT_DOT_TOK)
+			else
+			{
+				UNGET_CH;
+				ACCEPT('.')
+			}
+		}
 		else ACCEPT(CH)  /* single-chararcter token */
 
 	number:
@@ -913,6 +1020,94 @@ BOOL jam_constant_is_ok(char *string)
 /************************************************************************/
 /*																   		*/
 
+BOOL jam_binary_constant_is_ok(char *string)
+
+/*	This routine returns TRUE if the value represented by string is		*/
+/*	a valid binary number (containing only '0' and '1' characters).		*/
+/*																   		*/
+{
+	BOOL ok = TRUE;
+
+	while (ok && (*string != '\0'))
+	{
+		if ((*string != '0') && (*string != '1')) ok = FALSE;
+		++string;
+	}
+
+	return (ok);
+}
+
+
+/************************************************************************/
+/*																   		*/
+
+BOOL jam_hex_constant_is_ok(char *string)
+
+/*	This routine returns TRUE if the value represented by string is		*/
+/*	a valid hexadecimal number.									   		*/
+/*																   		*/
+{
+	BOOL ok = TRUE;
+
+	while (ok && (*string != '\0'))
+	{
+		if (((*string < '0') || (*string > '9')) &&
+			((*string < 'A') || (*string > 'F')) &&
+			((*string < 'a') || (*string > 'f')))
+		{
+			ok = FALSE;
+		}
+		++string;
+	}
+
+	return (ok);
+}
+
+long jam_atol_bin(char *string)
+{
+	long result = 0L;
+	int index = 0;
+
+	while ((string[index] == '0') || (string[index] == '1'))
+	{
+		result = (result << 1) + (string[index] - '0');
+		++index;
+	}
+
+	return (result);
+}
+
+long jam_atol_hex(char *string)
+{
+	long result = 0L;
+	int index = 0;
+
+	while (((string[index] >= '0') && (string[index] <= '9')) ||
+		((string[index] >= 'A') && (string[index] <= 'F')) ||
+		((string[index] >= 'a') && (string[index] <= 'f')))
+	{
+		if ((string[index] >= '0') && (string[index] <= '9'))
+		{
+			result = (result << 4) + (string[index] - '0');
+		}
+		else if ((string[index] >= 'A') && (string[index] <= 'F'))
+		{
+			result = (result << 4) + 10 + (string[index] - 'A');
+		}
+		else if ((string[index] >= 'a') && (string[index] <= 'f'))
+		{
+			result = (result << 4) + 10 + (string[index] - 'a');
+		}
+		++index;
+	}
+
+	return (result);
+}
+
+
+/************************************************************************/
+/*																   		*/
+
 BOOL jam_constant_value(char *string, long *value)
 
 /*                                                                      */
@@ -925,7 +1120,25 @@ BOOL jam_constant_value(char *string, long *value)
 {
 	BOOL status = FALSE;
 
-	if (jam_constant_is_ok(string))
+	if (jam_expression_type == '#')
+	{
+		if (jam_binary_constant_is_ok(string))
+		{
+			*value = jam_atol_bin(string);
+			jam_expression_type = 0;
+			status = TRUE;
+		}
+	}
+	else if (jam_expression_type == '$')
+	{
+		if (jam_hex_constant_is_ok(string))
+		{
+			*value = jam_atol_hex(string);
+			jam_expression_type = 0;
+			status = TRUE;
+		}
+	}
+	else if (jam_constant_is_ok(string))
 	{
 		if (string[0] == '-')
 		{
@@ -959,7 +1172,8 @@ void jam_yyerror (char *msg)
 /*																   		*/
 {
 	msg = msg; /* Avoid compiler warning about msg unused */
-	jam_return_code = JAMC_SYNTAX_ERROR;
+
+	if (jam_return_code == JAMC_SUCCESS) jam_return_code = JAMC_SYNTAX_ERROR;
 }
 
 
@@ -1018,13 +1232,9 @@ int jam_yylex()
 	}
 	else if (jam_token == IDENTIFIER_TOK)
 	{
-		symbol_rec = jam_get_symbol_record(jam_token_buffer);
+		jam_return_code = jam_get_symbol_record(jam_token_buffer, &symbol_rec);
 
-		if (symbol_rec == NULL)
-		{
-			jam_return_code = JAMC_SYNTAX_ERROR;
-		}
-		else
+		if (jam_return_code == JAMC_SUCCESS)
 		{
 			switch (symbol_rec->type)
 			{
@@ -1051,6 +1261,7 @@ int jam_yylex()
 				jam_token = ARRAY_TOK;
 				val = (long) symbol_rec;
 				type = JAM_ARRAY_REFERENCE;
+				jam_array_symbol_rec = symbol_rec;
 				break;
 
 			default:
@@ -1058,6 +1269,14 @@ int jam_yylex()
 				break;
 			}
 		}
+	}
+	else if (jam_token == '#')
+	{
+		jam_expression_type = '#';
+	}
+	else if (jam_token == '$')
+	{
+		jam_expression_type = '$';
 	}
 
 	jam_yylval.val = val;
@@ -1122,123 +1341,154 @@ const int jam_yyexca[] = {
   0,
 };
 
-#define YYNPROD 32
-#define YYLAST 441
+#define YYNPROD 37
+#define YYLAST 626
 
 const int jam_yyact[] = {
-       7,      43,      42,      19,      20,      41,       1,       4,
-      17,      15,       5,      16,       6,      18,      19,      40,
-      39,       0,      38,      17,       0,       0,      19,      20,
-      18,       0,      73,      17,      15,       0,      16,       0,
-      18,       0,      19,      20,       0,       0,      72,      17,
-      15,       0,      16,       0,      18,      19,      20,       0,
-       0,      71,      17,      15,       0,      16,       0,      18,
-       0,      19,      20,      74,      22,      70,      17,      15,
-       0,      16,       0,      18,      19,      20,       0,       0,
-      69,      17,      15,       0,      16,      19,      18,      22,
-       0,       0,      17,      15,       0,      16,       0,      18,
-       0,       0,      21,      22,       0,       8,       0,      19,
-      20,       0,       0,      62,      17,      15,      22,      16,
-       0,      18,       0,      19,      20,      21,       0,       0,
-      17,      15,      22,      16,       0,      18,      19,      20,
-       0,      21,       0,      17,      15,      22,      16,       0,
-      18,      19,      20,       0,      21,       0,      17,      15,
-       0,      16,       0,      18,      19,      20,       0,       0,
-      21,      17,      15,       0,      16,       0,      18,       0,
-      22,      19,      20,      21,       0,       0,      17,      15,
-      19,      16,       0,      18,      22,      17,      15,       0,
-      16,       0,      18,      19,       0,       0,       0,      22,
-      17,      15,       0,      16,       0,      18,      21,      19,
-       0,       0,      22,       0,      17,      15,       0,      16,
-       0,      18,      21,       0,       0,      22,       0,       0,
-       0,       0,       0,       0,       0,      21,       0,       0,
+       7,      67,      68,      79,      45,      76,      66,       4,
+      20,       7,       5,       1,       6,      18,      44,      43,
+       4,      20,      19,       5,       0,       6,      18,      16,
+      42,      17,      41,      19,      40,      39,       0,       0,
+       0,      20,      21,       0,       0,       0,      18,      16,
+       0,      17,       0,      19,      20,      21,       0,       0,
+       0,      18,      16,       0,      17,       0,      19,       0,
+      20,      21,       0,       0,      86,      18,      16,       0,
+      17,       0,      19,      20,      21,       0,       0,      83,
+      18,      16,       0,      17,       0,      19,      20,      21,
+       0,       0,      82,      18,      16,       0,      17,       0,
+      19,       0,      23,       0,       0,       8,       0,       0,
+       0,       0,      20,       0,      89,      23,       8,      18,
+      16,       0,      17,       0,      19,       0,       0,       0,
+      84,      23,       0,       0,       0,      20,      21,       0,
+      22,      81,      18,      16,      23,      17,       0,      19,
+      20,      21,       0,      22,      80,      18,      16,      23,
+      17,       0,      19,       0,      20,      21,       0,      22,
+      75,      18,      16,       0,      17,       0,      19,       0,
+       0,       0,      22,       0,       0,       0,       0,       0,
+       0,       0,       0,       0,       0,      22,       0,       0,
+       0,       0,       0,       0,       0,       0,      23,       0,
        0,       0,       0,       0,       0,       0,       0,       0,
-      21,       0,       0,       0,       0,       0,       0,      23,
-      24,      27,      28,      29,      30,      31,      32,      25,
-      26,       0,       9,      10,      11,      12,      13,       3,
-       0,      14,      23,      24,      27,      28,      29,      30,
-      31,      32,      25,      26,       0,       0,      23,      24,
-      27,      28,      29,      30,      31,      32,      25,      26,
-       0,      23,      24,      27,      28,      29,      30,      31,
-      32,      25,      26,       0,       0,      23,      24,      27,
-      28,      29,      30,      31,      32,      25,      26,       0,
-      23,      24,      27,      28,      29,      30,      31,      32,
-      25,      26,       0,      27,      28,      29,      30,      31,
-      32,      25,      26,       0,       0,       0,       0,       0,
-       0,       0,       0,      23,      24,      27,      28,      29,
-      30,      31,      32,      25,      26,       0,       0,      23,
-      24,      27,      28,      29,      30,      31,      32,      25,
-      26,       0,      23,       0,      27,      28,      29,      30,
-      31,      32,      25,      26,       0,       0,       0,      27,
-      28,      29,      30,      31,      32,      25,      26,       0,
-       0,       0,      27,      28,      29,      30,      31,      32,
-      25,      26,       0,       0,       0,       0,       0,      27,
-      28,      29,      30,      31,      32,      25,      26,       0,
-      29,      30,      31,      32,      25,      26,       0,       0,
-       0,       0,       0,       0,       2,       0,       0,      25,
-      26,      33,      34,      35,      36,      37,       0,       0,
-       0,       0,       0,       0,      44,      45,      46,      47,
-      48,      49,      50,      51,      52,      53,      54,      55,
-      56,      57,      58,      59,      60,      61,       0,       0,
-       0,       0,       0,      63,      64,      65,      66,      67,
-      68,
+       0,      23,       0,       0,       0,       0,      20,      21,
+       0,       0,       0,      18,      16,      23,      17,       0,
+      19,       0,       0,       0,      22,       0,       0,       0,
+      20,       0,       0,       0,       0,      18,      16,      22,
+      17,       0,      19,       0,      20,       0,       0,       0,
+       0,      18,      16,      22,      17,       0,      19,       0,
+       0,       0,       0,       9,      10,      11,      12,      13,
+      14,       3,      69,      15,       9,      10,      11,      12,
+      13,      14,       3,       0,      15,      24,      25,      28,
+      29,      30,      31,      32,      33,      26,      27,      87,
+      24,      25,      28,      29,      30,      31,      32,      33,
+      26,      27,       0,       0,      24,      25,      28,      29,
+      30,      31,      32,      33,      26,      27,       0,      24,
+      25,      28,      29,      30,      31,      32,      33,      26,
+      27,       0,      24,      25,      28,      29,      30,      31,
+      32,      33,      26,      27,       0,       0,       0,       0,
+       0,      20,      21,       0,       0,      64,      18,      16,
+       0,      17,       0,      19,      20,      21,      26,      27,
+       0,      18,      16,       0,      17,       0,      19,       0,
+       0,      24,      25,      28,      29,      30,      31,      32,
+      33,      26,      27,       0,      24,      25,      28,      29,
+      30,      31,      32,      33,      26,      27,       0,       0,
+      24,      25,      28,      29,      30,      31,      32,      33,
+      26,      27,      23,       0,      20,      21,       0,       0,
+       0,      18,      16,       0,      17,      23,      19,      20,
+      21,       0,       0,       0,      18,      16,       0,      17,
+       0,      19,       0,       0,      20,      21,       0,       0,
+      22,      18,      16,       0,      17,       0,      19,       0,
+       0,       0,       0,      22,      28,      29,      30,      31,
+      32,      33,      26,      27,       0,       0,       0,       0,
+       0,       0,       0,       0,       0,      23,      28,      29,
+      30,      31,      32,      33,      26,      27,       0,       0,
+      23,       0,       0,       0,      30,      31,      32,      33,
+      26,      27,       0,       0,       0,      23,       0,       0,
+       0,       0,       0,      22,       0,       0,       0,       0,
+       0,       0,       0,       0,       0,       0,      22,       0,
+       0,       0,       0,       0,       0,       0,       0,       0,
+       0,       0,       0,       0,       0,       0,       2,       0,
+       0,       0,       0,      34,      35,      36,      37,      38,
+       0,       0,       0,       0,       0,       0,       0,      46,
+      47,      48,      49,      50,      51,      52,      53,      54,
+      55,      56,      57,      58,      59,      60,      61,      62,
+      63,       0,       0,       0,       0,       0,      65,       0,
+      70,      71,      72,      73,      74,      24,      25,      28,
+      29,      30,      31,      32,      33,      26,      27,       0,
+      24,      25,      28,      29,      30,      31,      32,      33,
+      26,      27,      77,      78,       0,       0,       0,       0,
+       0,       0,       0,       0,       0,       0,      85,       0,
+       0,       0,       0,       0,       0,       0,      88,       0,
+       0,       0,       0,       0,       0,       0,       0,       0,
+       0,       0,       0,       0,       0,       0,       0,       0,
+      24,       0,      28,      29,      30,      31,      32,      33,
+      26,      27,       0,       0,       0,      28,      29,      30,
+      31,      32,      33,      26,      27,       0,       0,       0,
+       0,       0,      28,      29,      30,      31,      32,      33,
+      26,      27,
 };
 
 const int jam_yypact[] = {
-     -33,   -1000,      70,   -1000,     -33,     -33,     -33,     -33,
-     -33,     -22,     -24,     -25,     -35,     -38,     -90,     -33,
-     -33,     -33,     -33,     -33,     -33,     -33,     -33,     -33,
-     -33,     -33,     -33,     -33,     -33,     -33,     -33,     -33,
-     -33,      58,   -1000,   -1000,   -1000,   -1000,     -33,     -33,
-     -33,     -33,     -33,     -33,     -23,     -23,   -1000,   -1000,
-   -1000,      40,     103,     116,      92,      81,     146,     146,
-     123,     123,     134,     134,     134,     134,   -1000,      31,
-      20,       8,      -3,     -15,     -34,   -1000,   -1000,   -1000,
-   -1000,   -1000,   -1000,
+     -24,   -1000,     287,   -1000,     -24,     -24,     -24,     -24,
+     -24,     -11,     -12,     -14,     -16,     -25,     -26,     -87,
+     -24,     -24,     -24,     -24,     -24,     -24,     -24,     -24,
+     -24,     -24,     -24,     -24,     -24,     -24,     -24,     -24,
+     -24,     -24,     276,   -1000,   -1000,   -1000,   -1000,     -24,
+     -34,     -24,     -24,     -24,     -24,     -24,     -29,     -29,
+   -1000,   -1000,   -1000,     171,     359,     153,     346,     335,
+     -20,     -20,     183,     183,      61,      61,      61,      61,
+   -1000,     103,     -36,     -24,     -24,     -88,      91,      80,
+      41,      30,      19,   -1000,   -1000,     287,     287,     -33,
+   -1000,   -1000,   -1000,   -1000,   -1000,      -4,   -1000,     -24,
+       7,   -1000,
 };
 
 const int jam_yypgo[] = {
-       0,       6,     396,
+       0,      11,     486,       6,
 };
 
 const int jam_yyr1[] = {
-       0,       1,       2,       2,       2,       2,       2,       2,
+       0,       1,       3,       3,       3,       3,       2,       2,
        2,       2,       2,       2,       2,       2,       2,       2,
        2,       2,       2,       2,       2,       2,       2,       2,
        2,       2,       2,       2,       2,       2,       2,       2,
+       2,       2,       2,       2,       2,
 };
 
 const int jam_yyr2[] = {
-       0,       1,       1,       3,       2,       2,       2,       2,
+       0,       1,       2,       2,       6,       3,       1,       3,
+       2,       2,       2,       2,       3,       3,       3,       3,
        3,       3,       3,       3,       3,       3,       3,       3,
-       3,       3,       3,       3,       3,       3,       3,       3,
-       3,       3,       4,       4,       4,       4,       4,       4,
+       3,       3,       3,       3,       3,       3,       4,       4,
+       4,       4,       4,       4,       4,
 };
 
 const int jam_yychk[] = {
-   -1000,      -1,      -2,     272,      40,      43,      45,      33,
-     126,     267,     268,     269,     270,     271,     274,      43,
-      45,      42,      47,      37,      38,     124,      94,     257,
-     258,     265,     266,     259,     260,     261,     262,     263,
-     264,      -2,      -2,      -2,      -2,      -2,      40,      40,
-      40,      40,      40,      91,      -2,      -2,      -2,      -2,
+   -1000,      -1,      -2,     274,      40,      43,      45,      33,
+     126,     268,     269,     270,     271,     272,     273,     276,
+      43,      45,      42,      47,      37,      38,     124,      94,
+     257,     258,     265,     266,     259,     260,     261,     262,
+     263,     264,      -2,      -2,      -2,      -2,      -2,      40,
+      40,      40,      40,      40,      40,      91,      -2,      -2,
       -2,      -2,      -2,      -2,      -2,      -2,      -2,      -2,
-      -2,      -2,      -2,      -2,      -2,      -2,      41,      -2,
-      -2,      -2,      -2,      -2,      -2,      41,      41,      41,
-      41,      41,      93,
+      -2,      -2,      -2,      -2,      -2,      -2,      -2,      -2,
+      41,      -2,      -3,      35,      36,     276,      -2,      -2,
+      -2,      -2,      -2,      41,      41,      -2,      -2,      91,
+      41,      41,      41,      41,      93,      -2,      93,     267,
+      -2,      93,
 };
 
 const int jam_yydef[] = {
-       0,      -2,       1,       2,       0,       0,       0,       0,
+       0,      -2,       1,       6,       0,       0,       0,       0,
        0,       0,       0,       0,       0,       0,       0,       0,
        0,       0,       0,       0,       0,       0,       0,       0,
        0,       0,       0,       0,       0,       0,       0,       0,
-       0,       0,       4,       5,       6,       7,       0,       0,
-       0,       0,       0,       0,       8,       9,      10,      11,
-      12,      13,      14,      15,      16,      17,      18,      19,
-      20,      21,      22,      23,      24,      25,       3,       0,
-       0,       0,       0,       0,       0,      26,      27,      28,
-      29,      30,      31,
+       0,       0,       0,       8,       9,      10,      11,       0,
+       0,       0,       0,       0,       0,       0,      12,      13,
+      14,      15,      16,      17,      18,      19,      20,      21,
+      22,      23,      24,      25,      26,      27,      28,      29,
+       7,       0,       0,       0,       0,       0,       0,       0,
+       0,       0,       0,      30,      31,       2,       3,       0,
+      32,      33,      34,      35,      36,       0,       5,       0,
+       0,       4,
 };
 
 /****************************************************************************/
@@ -1274,7 +1524,7 @@ int token = -1; /* input token */
 int errct = 0;  /* error count */
 int errfl = 0;  /* error flag */
 
-int jam_yyparse()
+jam_yyparse()
 { int jam_yys[YYMAXDEPTH];
   int jam_yyj, jam_yym;
   YYSTYPE *jam_yypvt;
@@ -1383,94 +1633,109 @@ int jam_yyparse()
 	    switch(jam_yym){
 	    	
 case 1:
-/* # line 275 "jamexp.y" */
-{jam_parse_value = jam_yypvt[-0].val; jam_expr_type = jam_yypvt[-0].type;} break;
-case 3:
-/* # line 280 "jamexp.y" */
-{jam_yyval = jam_yypvt[-1];} break;
-case 4:
-/* # line 281 "jamexp.y" */
-{jam_yyval = jam_yypvt[-0];} break;
-case 5:
-/* # line 282 "jamexp.y" */
-{jam_yyval = CALC(UMINUS, jam_yypvt[-0], NULL_EXP);} break;
-case 6:
-/* # line 283 "jamexp.y" */
-{jam_yyval = CALC(NOT, jam_yypvt[-0], NULL_EXP);} break;
-case 7:
-/* # line 284 "jamexp.y" */
-{jam_yyval = CALC(BITWISE_NOT, jam_yypvt[-0], NULL_EXP);} break;
-case 8:
-/* # line 285 "jamexp.y" */
-{jam_yyval = CALC(ADD, jam_yypvt[-2], jam_yypvt[-0]);} break;
-case 9:
-/* # line 286 "jamexp.y" */
-{jam_yyval = CALC(SUB, jam_yypvt[-2], jam_yypvt[-0]);} break;
-case 10:
-/* # line 287 "jamexp.y" */
-{jam_yyval = CALC(MULT, jam_yypvt[-2], jam_yypvt[-0]);} break;
-case 11:
 /* # line 288 "jamexp.y" */
-{jam_yyval = CALC(DIV, jam_yypvt[-2], jam_yypvt[-0]);} break;
-case 12:
-/* # line 289 "jamexp.y" */
-{jam_yyval = CALC(MOD, jam_yypvt[-2], jam_yypvt[-0]);} break;
-case 13:
-/* # line 290 "jamexp.y" */
-{jam_yyval = CALC(BITWISE_AND, jam_yypvt[-2], jam_yypvt[-0]);} break;
-case 14:
-/* # line 291 "jamexp.y" */
-{jam_yyval = CALC(BITWISE_OR, jam_yypvt[-2], jam_yypvt[-0]);} break;
-case 15:
+{jam_parse_value = jam_yypvt[-0].val; jam_expr_type = jam_yypvt[-0].type;} break;
+case 2:
 /* # line 292 "jamexp.y" */
-{jam_yyval = CALC(BITWISE_XOR, jam_yypvt[-2], jam_yypvt[-0]);} break;
-case 16:
+{jam_yyval = CALC(POUND, jam_yypvt[-0], NULL_EXP);} break;
+case 3:
 /* # line 293 "jamexp.y" */
-{jam_yyval = CALC(AND, jam_yypvt[-2], jam_yypvt[-0]);} break;
-case 17:
-/* # line 294 "jamexp.y" */
-{jam_yyval = CALC(OR, jam_yypvt[-2], jam_yypvt[-0]);} break;
-case 18:
+{jam_yyval = CALC(DOLLAR, jam_yypvt[-0], NULL_EXP);} break;
+case 4:
 /* # line 295 "jamexp.y" */
-{jam_yyval = CALC(LEFT_SHIFT, jam_yypvt[-2], jam_yypvt[-0]);} break;
-case 19:
+{jam_yyval = CALC(ARRAY_RANGE, jam_yypvt[-3], jam_yypvt[-1]);} break;
+case 5:
 /* # line 296 "jamexp.y" */
-{jam_yyval = CALC(RIGHT_SHIFT, jam_yypvt[-2], jam_yypvt[-0]);} break;
-case 20:
-/* # line 297 "jamexp.y" */
-{jam_yyval = CALC(EQUALITY, jam_yypvt[-2], jam_yypvt[-0]);} break;
-case 21:
-/* # line 298 "jamexp.y" */
-{jam_yyval = CALC(INEQUALITY, jam_yypvt[-2], jam_yypvt[-0]);} break;
-case 22:
-/* # line 299 "jamexp.y" */
-{jam_yyval = CALC(GREATER_THAN, jam_yypvt[-2], jam_yypvt[-0]);} break;
-case 23:
-/* # line 300 "jamexp.y" */
-{jam_yyval = CALC(LESS_THAN, jam_yypvt[-2], jam_yypvt[-0]);} break;
-case 24:
+{jam_yyval = CALC(ARRAY_ALL, jam_yypvt[-2], NULL_EXP);} break;
+case 7:
 /* # line 301 "jamexp.y" */
-{jam_yyval = CALC(GREATER_OR_EQUAL, jam_yypvt[-2], jam_yypvt[-0]);} break;
-case 25:
+{jam_yyval = jam_yypvt[-1];} break;
+case 8:
 /* # line 302 "jamexp.y" */
-{jam_yyval = CALC(LESS_OR_EQUAL, jam_yypvt[-2], jam_yypvt[-0]);} break;
-case 26:
+{jam_yyval = jam_yypvt[-0];} break;
+case 9:
 /* # line 303 "jamexp.y" */
-{jam_yyval = CALC(ABS, jam_yypvt[-1], NULL_EXP);} break;
-case 27:
+{jam_yyval = CALC(UMINUS, jam_yypvt[-0], NULL_EXP);} break;
+case 10:
 /* # line 304 "jamexp.y" */
-{jam_yyval = CALC(LOG2, jam_yypvt[-1], NULL_EXP);} break;
-case 28:
+{jam_yyval = CALC(NOT, jam_yypvt[-0], NULL_EXP);} break;
+case 11:
 /* # line 305 "jamexp.y" */
-{jam_yyval = CALC(SQRT, jam_yypvt[-1], NULL_EXP);} break;
-case 29:
+{jam_yyval = CALC(BITWISE_NOT, jam_yypvt[-0], NULL_EXP);} break;
+case 12:
 /* # line 306 "jamexp.y" */
-{jam_yyval = CALC(CIEL, jam_yypvt[-1], NULL_EXP);} break;
-case 30:
+{jam_yyval = CALC(ADD, jam_yypvt[-2], jam_yypvt[-0]);} break;
+case 13:
 /* # line 307 "jamexp.y" */
-{jam_yyval = CALC(FLOOR, jam_yypvt[-1], NULL_EXP);} break;
-case 31:
+{jam_yyval = CALC(SUB, jam_yypvt[-2], jam_yypvt[-0]);} break;
+case 14:
 /* # line 308 "jamexp.y" */
+{jam_yyval = CALC(MULT, jam_yypvt[-2], jam_yypvt[-0]);} break;
+case 15:
+/* # line 309 "jamexp.y" */
+{jam_yyval = CALC(DIV, jam_yypvt[-2], jam_yypvt[-0]);} break;
+case 16:
+/* # line 310 "jamexp.y" */
+{jam_yyval = CALC(MOD, jam_yypvt[-2], jam_yypvt[-0]);} break;
+case 17:
+/* # line 311 "jamexp.y" */
+{jam_yyval = CALC(BITWISE_AND, jam_yypvt[-2], jam_yypvt[-0]);} break;
+case 18:
+/* # line 312 "jamexp.y" */
+{jam_yyval = CALC(BITWISE_OR, jam_yypvt[-2], jam_yypvt[-0]);} break;
+case 19:
+/* # line 313 "jamexp.y" */
+{jam_yyval = CALC(BITWISE_XOR, jam_yypvt[-2], jam_yypvt[-0]);} break;
+case 20:
+/* # line 314 "jamexp.y" */
+{jam_yyval = CALC(AND, jam_yypvt[-2], jam_yypvt[-0]);} break;
+case 21:
+/* # line 315 "jamexp.y" */
+{jam_yyval = CALC(OR, jam_yypvt[-2], jam_yypvt[-0]);} break;
+case 22:
+/* # line 316 "jamexp.y" */
+{jam_yyval = CALC(LEFT_SHIFT, jam_yypvt[-2], jam_yypvt[-0]);} break;
+case 23:
+/* # line 317 "jamexp.y" */
+{jam_yyval = CALC(RIGHT_SHIFT, jam_yypvt[-2], jam_yypvt[-0]);} break;
+case 24:
+/* # line 318 "jamexp.y" */
+{jam_yyval = CALC(EQUALITY, jam_yypvt[-2], jam_yypvt[-0]);} break;
+case 25:
+/* # line 319 "jamexp.y" */
+{jam_yyval = CALC(INEQUALITY, jam_yypvt[-2], jam_yypvt[-0]);} break;
+case 26:
+/* # line 320 "jamexp.y" */
+{jam_yyval = CALC(GREATER_THAN, jam_yypvt[-2], jam_yypvt[-0]);} break;
+case 27:
+/* # line 321 "jamexp.y" */
+{jam_yyval = CALC(LESS_THAN, jam_yypvt[-2], jam_yypvt[-0]);} break;
+case 28:
+/* # line 322 "jamexp.y" */
+{jam_yyval = CALC(GREATER_OR_EQUAL, jam_yypvt[-2], jam_yypvt[-0]);} break;
+case 29:
+/* # line 323 "jamexp.y" */
+{jam_yyval = CALC(LESS_OR_EQUAL, jam_yypvt[-2], jam_yypvt[-0]);} break;
+case 30:
+/* # line 324 "jamexp.y" */
+{jam_yyval = CALC(ABS, jam_yypvt[-1], NULL_EXP);} break;
+case 31:
+/* # line 325 "jamexp.y" */
+{jam_yyval = CALC(INT, jam_yypvt[-1], NULL_EXP);} break;
+case 32:
+/* # line 326 "jamexp.y" */
+{jam_yyval = CALC(LOG2, jam_yypvt[-1], NULL_EXP);} break;
+case 33:
+/* # line 327 "jamexp.y" */
+{jam_yyval = CALC(SQRT, jam_yypvt[-1], NULL_EXP);} break;
+case 34:
+/* # line 328 "jamexp.y" */
+{jam_yyval = CALC(CIEL, jam_yypvt[-1], NULL_EXP);} break;
+case 35:
+/* # line 329 "jamexp.y" */
+{jam_yyval = CALC(FLOOR, jam_yypvt[-1], NULL_EXP);} break;
+case 36:
+/* # line 330 "jamexp.y" */
 {jam_yyval = CALC(ARRAY, jam_yypvt[-3], jam_yypvt[-1]);} break;
 	    }
 	    goto jam_yystack;  /* stack new state and value */
