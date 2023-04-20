@@ -23,7 +23,7 @@ extern long jam_current_statement_position;
 
 extern long jam_next_statement_position;
 
-extern unsigned int jam_statement_buffer_size;
+extern int jam_statement_buffer_size;
 
 /****************************************************************************/
 /*																			*/

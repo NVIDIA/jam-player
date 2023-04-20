@@ -20,7 +20,7 @@ char jam_toupper(char ch)
 
 int jam_iscntrl(char ch)
 {
-	return (((ch >= 0) && (ch <= 0x1f)) || (ch == 0x7f));
+	return (((ch <= 0x1f)) || (ch == 0x7f));
 }
 
 int jam_isalpha(char ch)

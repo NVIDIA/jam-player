@@ -17,6 +17,7 @@
 #include "jamexprt.h"
 #include "jamdefs.h"
 #include "jamcomp.h"
+#include <stddef.h>
 
 #define	SHORT_BITS			16
 #define	CHAR_BITS			8
@@ -140,7 +141,7 @@ long jam_uncompress
 	for (i = 0; i < out_length; ++i) out[i] = 0;
 
 	/* Read number of bytes in data. */
-	for (i = 0; i < sizeof (in_length); ++i) 
+	for (i = 0; (size_t) i < sizeof (in_length); ++i)
 	{
 		data_length = data_length | ((long) jam_read_packed(in, in_length, CHAR_BITS) << (long) (i * CHAR_BITS));
 	}

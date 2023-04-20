@@ -50,7 +50,7 @@
 #define JAMC_ARRAY_CACHE_SIZE 1024
 
 /* character length limits */
-#define JAMC_MAX_STATEMENT_LENGTH ((const) jam_statement_buffer_size)
+#define JAMC_MAX_STATEMENT_LENGTH ((const int) jam_statement_buffer_size)
 #define JAMC_MAX_NAME_LENGTH 32
 #define JAMC_MAX_INSTR_LENGTH 10
 

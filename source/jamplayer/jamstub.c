@@ -52,9 +52,7 @@ typedef unsigned long DWORD;
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <io.h>
 #include <fcntl.h>
-#include <process.h>
 #if defined(USE_STATIC_MEMORY)
 	#define N_STATIC_MEMORY_KBYTES ((unsigned int) USE_STATIC_MEMORY)
 	#define N_STATIC_MEMORY_BYTES (N_STATIC_MEMORY_KBYTES * 1024)
@@ -64,18 +62,23 @@ typedef unsigned long DWORD;
 	#define POINTER_ALIGNMENT sizeof(BYTE)
 #endif /* USE_STATIC_MEMORY */
 #include <time.h>
-#include <conio.h>
 #include <ctype.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 
 #if PORT == DOS
+#include <process.h>
+#include <io.h>
+#include <conio.h>
 #include <bios.h>
 #endif
 
 #include "jamexprt.h"
 
 #if PORT == WINDOWS
+#include <process.h>
+#include <io.h>
+#include <conio.h>
 #define PGDC_IOCTL_GET_DEVICE_INFO_PP 0x00166A00L
 #define PGDC_IOCTL_READ_PORT_PP       0x00166A04L
 #define PGDC_IOCTL_WRITE_PORT_PP      0x0016AA08L
@@ -111,6 +114,23 @@ extern unsigned int _stklen = 50000;
 *
 *	Global variables
 */
+
+#if PORT == OPENBMC_AST
+#include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
+#include "jtag.h"
+void printHelp()
+{
+       printf("Usage: jam [-h] [-v] [-d<var=val>] [-m<memsize>] [-j<jtagdevfile>] [-s <sleep_in_us_between_each_jtag_clock>]  <filename>\n");
+}
+
+int device_fd;
+char *device_path;
+long sleep_ms = 0;
+#endif
 
 /* file buffer for JAM input file */
 #if PORT == DOS
@@ -275,6 +295,8 @@ int jam_seek(long offset)
 
 int jam_jtag_io(int tms, int tdi, int read_tdo)
 {
+
+#if PORT == WINDOWS || PORT == DOS
 	int data = 0;
 	int tdo = 0;
 	int i = 0;
@@ -284,6 +306,11 @@ int jam_jtag_io(int tms, int tdi, int read_tdo)
 	if (!jtag_hardware_initialized)
 	{
 		initialize_jtag_hardware();
+#if OPENBMC_AST
+		if (device_fd <0) {
+			return -1;
+		}
+#endif
 		jtag_hardware_initialized = TRUE;
 	}
 
@@ -319,7 +346,6 @@ int jam_jtag_io(int tms, int tdi, int read_tdo)
 	}
 	else
 	{
-#if PORT == WINDOWS || PORT == DOS
 		data = (alternative_cable_l ? ((tdi ? 0x01 : 0) | (tms ? 0x04 : 0)) :
 		       (alternative_cable_x ? ((tdi ? 0x01 : 0) | (tms ? 0x04 : 0) | 0x10) :
 		       ((tdi ? 0x40 : 0) | (tms ? 0x02 : 0))));
@@ -337,15 +363,51 @@ int jam_jtag_io(int tms, int tdi, int read_tdo)
 		write_byteblaster(0, data | (alternative_cable_l ? 0x02 : (alternative_cable_x ? 0x02: 0x01)));
 
 		write_byteblaster(0, data);
-#else
-		/* parallel port interface not available */
-		tdo = 0;
-#endif
-	}
-
 	if (tck_delay != 0) delay_loop(tck_delay);
 
 	return (tdo);
+	}
+#elif PORT == OPENBMC_AST
+	struct tck_bitbang data;
+	struct bitbang_packet bb_packet;
+
+	if (!jtag_hardware_initialized)
+	{
+		initialize_jtag_hardware();
+		if (device_fd <0) {
+			fprintf(stderr, "Error:  Could not find OpenBMC JTAG driver handle\n");
+			return -1;
+		}
+		jtag_hardware_initialized = TRUE;
+	}
+
+
+    if (sleep_ms != 0) {
+        usleep(sleep_ms);
+    }
+	data.tdi = 0;
+	if (tdi != 0)
+		data.tdi = 1;
+	data.tms = 0;
+	if (tms != 0)
+		data.tms = 1;
+
+	bb_packet.length = 1;
+	bb_packet.data = &data;
+	if (device_fd >= 0)
+           ioctl(device_fd, JTAG_IOCBITBANG, &bb_packet);
+
+	if (read_tdo == 0) {
+           return 0;
+	}
+	return data.tdo;
+#else
+		/* parallel port interface not available */
+		tdo = 0;
+		return tdo;
+	}
+#endif
+
 }
 
 void jam_message(char *message_text)
@@ -460,6 +522,7 @@ void jam_export_boolean_array(char *key, unsigned char *data, long count)
 
 void jam_delay(long microseconds)
 {
+#if PORT != OPENBMC_AST
 #if PORT == WINDOWS
 	/* if Windows NT, flush I/O cache buffer before delay loop */
 	if (windows_nt && (port_io_count > 0)) flush_ports();
@@ -467,6 +530,8 @@ void jam_delay(long microseconds)
 
 	delay_loop(microseconds *
 		((one_ms_delay / 1000L) + ((one_ms_delay % 1000L) ? 1 : 0)));
+#endif
+	usleep(microseconds);
 }
 
 int jam_vector_map
@@ -517,12 +582,21 @@ int jam_vector_map
 
 int jam_vector_io
 (
+#if PORT!=OPENBMC_AST
 	int signal_count,
 	long *dir_vect,
 	long *data_vect,
 	long *capture_vect
+#else
+	__attribute__ ((unused)) int signal_count,
+	__attribute__ ((unused) )long *dir_vect,
+	__attribute__ ((unused)) long *data_vect,
+	__attribute__ ((unused)) long *capture_vect
+#endif
 )
 {
+//this code is only used for non-JTAG ports
+#if PORT!=OPENBMC_AST
 	int signal, vector, bit;
 	int matched_count = 0;
 	int data = 0;
@@ -634,6 +708,9 @@ int jam_vector_io
 	}
 
 	return (matched_count);
+#else
+	return 0;
+#endif //OPENBMC_AST
 }
 
 int jam_set_frequency(long hertz)
@@ -865,6 +942,8 @@ DWORD get_tick_count(void)
 
 void calibrate_delay(void)
 {
+
+#if PORT == WINDOWS || PORT == DOS
 	int sample = 0;
 	int count = 0;
 	DWORD tick_count1 = 0L;
@@ -872,7 +951,6 @@ void calibrate_delay(void)
 
 	one_ms_delay = 0L;
 
-#if PORT == WINDOWS || PORT == DOS
 	for (sample = 0; sample < DELAY_SAMPLES; ++sample)
 	{
 		count = 0;
@@ -926,7 +1004,6 @@ char *error_text[] =
 int main(int argc, char **argv)
 {
 	BOOL help = FALSE;
-	BOOL error = FALSE;
 	char *filename = NULL;
 	long offset = 0L;
 	long error_line = 0L;
@@ -937,7 +1014,10 @@ int main(int argc, char **argv)
 	char key[33] = {0};
 	char value[257] = {0};
 	int exit_status = 0;
+#if PORT!=OPENBMC_AST
+	BOOL error = FALSE;
 	int arg = 0;
+#endif
 	int exit_code = 0;
 	int format_version = 0;
 	time_t start_time = 0;
@@ -952,14 +1032,14 @@ int main(int argc, char **argv)
 	long workspace_size = 0;
 	char *exit_string = NULL;
 	int reset_jtag = 1;
-
+	int c = 0;
 	verbose = FALSE;
 
 	init_list[0] = NULL;
 
 	/* print out the version string and copyright message */
 	fprintf(stderr, "Jam STAPL Player Version 2.5 (20040526)\nCopyright (C) 1997-2004 Altera Corporation\n\n");
-
+#if PORT!=OPENBMC_AST
 	for (arg = 1; arg < argc; arg++)
 	{
 #if PORT == UNIX
@@ -1071,6 +1151,50 @@ int main(int argc, char **argv)
 			error = FALSE;
 		}
 	}
+#else
+
+device_path = NULL;
+sleep_ms = 0;
+
+while ((c = getopt(argc, argv, "vm:d:j:ha:s:")) != -1) {
+       switch (c) {
+               case 'v':
+                       verbose = TRUE;
+                       break;
+               case 'm':
+                       workspace_size = atoi(optarg);
+                       break;
+               case 's':
+                        sleep_ms = atoi(optarg);
+                        break;
+               case 'a':
+                       action = optarg;
+                       break;
+
+               case 'd':
+                       init_list[init_count] = optarg;
+                       init_list[++init_count] = NULL;
+                       break;
+               case 'j':
+                       device_path = optarg;
+                       break;
+               case 'h':
+                       printHelp();
+                       break;
+               default:
+                       printHelp();
+       }
+}
+
+if (!device_path) {
+       printf ("ast jtag device path must be present\n");
+       exit (1);
+}
+
+if (optind < argc)
+       filename = argv[optind];
+
+#endif //PORT != OPENBMC_AST
 
 #if PORT == WINDOWS || PORT == DOS
 	if (specified_lpt_port && specified_com_port)
@@ -1325,7 +1449,7 @@ int main(int argc, char **argv)
 			}
 			else
 			{
-				printf("Unknown error code %ld\n", exec_result);
+				printf("Unknown error code %d\n", exec_result);
 			}
 
 			/*
@@ -1655,6 +1779,7 @@ void get_lpt_addresses_from_registry()
 
 void initialize_jtag_hardware()
 {
+#if PORT == WINDOWS || PORT == DOS
 	if (specified_com_port)
 	{
 		com_port = open(serial_port_name, O_RDWR);
@@ -1695,8 +1820,6 @@ void initialize_jtag_hardware()
 	}
 	else
 	{
-#if PORT == WINDOWS || PORT == DOS
-
 #if PORT == WINDOWS
 		if (windows_nt)
 		{
@@ -1773,12 +1896,17 @@ void initialize_jtag_hardware()
 		/* set AUTO-FEED low to enable ByteBlaster (value to port inverted) */
 		/* set DIRECTION low for data output from parallel port */
 		write_byteblaster(2, (initial_lpt_ctrl | 0x02) & 0xDF);
-#endif
 	}
+#endif
+
+#if PORT == OPENBMC_AST
+	device_fd = open(device_path, O_RDWR);
+#endif
 }
 
 void close_jtag_hardware()
 {
+#if PORT != OPENBMC_AST
 	if (specified_com_port)
 	{
 		if (com_port != -1) close(com_port);
@@ -1799,6 +1927,10 @@ void close_jtag_hardware()
 #endif
 #endif
 	}
+#else
+	if (device_fd >=0)
+       close (device_fd);
+#endif
 }
 
 #if PORT == WINDOWS
@@ -2041,9 +2173,10 @@ void flush_ports(void)
 }
 #endif /* PORT == WINDOWS */
 #endif /* PORT == WINDOWS || PORT == DOS */
-
+#if PORT!=OPENBMC_AST
 #if !defined (DEBUG)
 #pragma optimize ("ceglt", off)
+#endif
 #endif
 
 void delay_loop(long count)

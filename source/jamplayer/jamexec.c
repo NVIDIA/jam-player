@@ -62,7 +62,7 @@ long jam_current_statement_position = 0L;
 /* current statement, but not necessarily the next one to be executed) */
 long jam_next_statement_position = 0L;
 
-unsigned int jam_statement_buffer_size = 0L;
+int jam_statement_buffer_size = 0L;
 
 /* name of desired action (Jam 2.0 only) */
 char *jam_action = NULL;
@@ -1905,6 +1905,8 @@ JAM_RETURN_TYPE jam_process_uses_item
 							}
 						}
 						break;
+					default:
+						break;
 					}
 				}
 			}
@@ -2063,7 +2065,7 @@ JAM_RETURN_TYPE jam_process_uses_list
 
 	while ((status == JAMC_SUCCESS) &&
 		(uses_list[index] != JAMC_SEMICOLON_CHAR) &&
-		(uses_list[index] != NULL) &&
+		(uses_list[index] != (int)NULL) &&
 		(index < JAMC_MAX_STATEMENT_LENGTH))
 	{
 		while ((jam_isspace(uses_list[index])) &&
@@ -2247,6 +2249,8 @@ JAM_RETURN_TYPE jam_call_procedure
 								status = JAMC_SUCCESS;
 							}
 						}
+						break;
+					default:
 						break;
 					}
 				}
@@ -3963,7 +3967,7 @@ JAM_RETURN_TYPE jam_process_exit
 	*	(from -32767 to 32767) for compatibility with 16-bit systems.
 	*/
 	if ((status == JAMC_SUCCESS) &&
-		((exit_code_value < -32767L)) || (exit_code_value > 32767L))
+		(((exit_code_value < -32767L)) || (exit_code_value > 32767L)))
 	{
 		status = JAMC_INTEGER_OVERFLOW;
 	}
@@ -4583,7 +4587,6 @@ JAM_RETURN_TYPE jam_process_integer
 	{
 		return (JAMC_PHASE_ERROR);
 	}
-
 	index = jam_skip_instruction_name(statement_buffer);
 
 	if (jam_isalpha(statement_buffer[index]))
@@ -8549,7 +8552,6 @@ JAM_RETURN_TYPE jam_execute_statement
 	}
 
 	jam_free_literal_aca_buffers();
-
 	return (status);
 }
 
@@ -8698,7 +8700,6 @@ JAM_RETURN_TYPE jam_execute
 				statement_buffer,
 				label_buffer
 			);
-
 			if ((status == JAMC_SUCCESS)
 				&& (label_buffer[0] != JAMC_NULL_CHAR))
 			{

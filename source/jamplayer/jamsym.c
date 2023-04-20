@@ -20,7 +20,7 @@
 #include "jamsym.h"
 #include "jamheap.h"
 #include "jamutil.h"
-
+#include <stddef.h>
 /****************************************************************************/
 /*																			*/
 /*	Global variables														*/
@@ -58,7 +58,7 @@ JAM_RETURN_TYPE jam_init_symbol_table()
 		jam_symbol_bottom = (void *) (((long)jam_workspace) +
 			((long)jam_workspace_size));
 
-		if (jam_workspace_size <
+		if ((size_t)jam_workspace_size <
 			(JAMC_MAX_SYMBOL_COUNT * sizeof(void *)))
 		{
 			status = JAMC_OUT_OF_MEMORY;
