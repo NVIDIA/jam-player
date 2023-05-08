@@ -6,6 +6,8 @@
 /*																			*/
 /*	Description:	Prototypes for stack management functions				*/
 /*																			*/
+/*	Revisions:		1.1	added jam_free_stack()								*/
+/*																			*/
 /****************************************************************************/
 
 #ifndef INC_JAMSTACK_H
@@ -56,6 +58,11 @@ extern JAMS_STACK_RECORD *jam_stack;
 /****************************************************************************/
 
 JAM_RETURN_TYPE jam_init_stack
+(
+	void
+);
+
+void jam_free_stack
 (
 	void
 );

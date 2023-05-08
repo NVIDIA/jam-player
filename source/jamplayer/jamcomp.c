@@ -14,8 +14,10 @@
 /*																			*/
 /****************************************************************************/
 
+#include "jamexprt.h"
 #include "jamdefs.h"
 #include "jamcomp.h"
+#include <stddef.h>
 
 #define	SHORT_BITS			16
 #define	CHAR_BITS			8
@@ -115,7 +117,8 @@ long jam_uncompress
 	char *in, 
 	long in_length, 
 	char *out, 
-	long out_length
+	long out_length,
+	int version
 )
 
 /*																			*/
@@ -130,12 +133,15 @@ long jam_uncompress
 {
 	long	i, j, data_length = 0L;
 	short	offset, length;
+	long	match_data_length = MATCH_DATA_LENGTH;
+
+	if (version == 2) --match_data_length;
 	
 	jam_read_packed(NULL, 0, 0);
 	for (i = 0; i < out_length; ++i) out[i] = 0;
 
 	/* Read number of bytes in data. */
-	for (i = 0; i < sizeof (in_length); ++i) 
+	for (i = 0; (size_t) i < sizeof (in_length); ++i)
 	{
 		data_length = data_length | ((long) jam_read_packed(in, in_length, CHAR_BITS) << (long) (i * CHAR_BITS));
 	}
@@ -161,7 +167,7 @@ long jam_uncompress
 			else
 			{
 				/* A 1 bit indicates offset/length to follow. */
-				offset = jam_read_packed(in, in_length, jam_bits_required((short) (i > MATCH_DATA_LENGTH ? MATCH_DATA_LENGTH : i)));
+				offset = jam_read_packed(in, in_length, jam_bits_required((short) (i > match_data_length ? match_data_length : i)));
 				length = jam_read_packed(in, in_length, CHAR_BITS);
 
 				for (j = 0; j < length; ++j)

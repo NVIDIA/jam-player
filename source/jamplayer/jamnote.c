@@ -199,6 +199,8 @@ BOOL jam_get_note_value
 
 JAM_RETURN_TYPE jam_get_note
 (
+	char *program,
+	long program_size,
 	long *offset,
 	char *key,
 	char *value,
@@ -218,35 +220,49 @@ JAM_RETURN_TYPE jam_get_note
 /****************************************************************************/
 {
 	JAM_RETURN_TYPE status = JAMC_SUCCESS;
-	char statement_buffer[JAMC_MAX_STATEMENT_LENGTH + 1];
+	char *statement_buffer = NULL;
+	unsigned int statement_buffer_size = 0;
 	char label_buffer[JAMC_MAX_NAME_LENGTH + 1];
 	JAME_INSTRUCTION instruction = JAM_ILLEGAL_INSTR;
 	long key_begin = 0L;
 	long key_end = 0L;
 	long value_begin = 0L;
 	long value_end = 0L;
-	BOOL done = 0;
+	BOOL done = FALSE;
+	char *tmp_program = jam_program;
+	long tmp_program_size = jam_program_size;
+	long tmp_current_file_position = jam_current_file_position;
+	long tmp_current_statement_position = jam_current_statement_position;
+	long tmp_next_statement_position = jam_next_statement_position;
+
+	jam_program = program;
+	jam_program_size = program_size;
 
 	jam_current_statement_position = 0L;
 	jam_next_statement_position = 0L;
 
-	if (offset == NULL)
+	status = jam_init_statement_buffer(&statement_buffer, &statement_buffer_size);
+
+	if (status == JAMC_SUCCESS)
 	{
-		/*
-		*	We will search for the first note with a specific key, and
-		*	return only the value
-		*/
-		status = jam_seek(0L);
-		jam_current_file_position = 0L;
-	}
-	else
-	{
-		/*
-		*	We will search for the next note, regardless of the key, and
-		*	return both the value and the key
-		*/
-		status = jam_seek(*offset);
-		jam_current_file_position = *offset;
+		if (offset == NULL)
+		{
+			/*
+			*	We will search for the first note with a specific key, and
+			*	return only the value
+			*/
+			status = jam_seek(0L);
+			jam_current_file_position = 0L;
+		}
+		else
+		{
+			/*
+			*	We will search for the next note, regardless of the key, and
+			*	return both the value and the key
+			*/
+			status = jam_seek(*offset);
+			jam_current_file_position = *offset;
+		}
 	}
 
 	/*
@@ -262,8 +278,6 @@ JAM_RETURN_TYPE jam_get_note
 
 			if (instruction == JAM_NOTE_INSTR)
 			{
-				status = JAMC_SYNTAX_ERROR;
-
 				if (jam_get_note_key(statement_buffer, &key_begin, &key_end))
 				{
 					statement_buffer[key_end] = JAMC_NULL_CHAR;
@@ -274,7 +288,7 @@ JAM_RETURN_TYPE jam_get_note
 						if (jam_get_note_value(&statement_buffer[key_end + 1],
 							&value_begin, &value_end))
 						{
-							done = 1;
+							done = TRUE;
 							value_begin += (key_end + 1);
 							value_end += (key_end + 1);
 							statement_buffer[value_end] = JAMC_NULL_CHAR;
@@ -283,10 +297,16 @@ JAM_RETURN_TYPE jam_get_note
 							{
 								*offset = jam_current_file_position;
 							}
-
-							status = JAMC_SUCCESS;
+						}
+						else
+						{
+							status = JAMC_SYNTAX_ERROR;
 						}
 					}
+				}
+				else
+				{
+					status = JAMC_SYNTAX_ERROR;
 				}
 			}
 		}
@@ -297,9 +317,21 @@ JAM_RETURN_TYPE jam_get_note
 	*/
 	if (done && (status == JAMC_SUCCESS))
 	{
-		jam_strncpy(key, &statement_buffer[key_begin], JAMC_MAX_NAME_LENGTH);
+		if (offset != NULL)
+		{
+			/* only copy the key string if we were looking for all NOTEs */
+			jam_strncpy(
+				key, &statement_buffer[key_begin], JAMC_MAX_NAME_LENGTH);
+		}
 		jam_strncpy(value, &statement_buffer[value_begin], length);
 	}
+
+	jam_program = tmp_program;
+	jam_program_size = tmp_program_size;
+	jam_current_file_position = tmp_current_file_position;
+	jam_current_statement_position = tmp_current_statement_position;
+	jam_next_statement_position = tmp_next_statement_position;
+	jam_free_statement_buffer(&statement_buffer, &statement_buffer_size);
 
 	return (status);
 }

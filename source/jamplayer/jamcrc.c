@@ -99,6 +99,8 @@ int jam_hexchar(int ch)
 
 JAM_RETURN_TYPE jam_check_crc
 (
+	char *program,
+	long program_size,
 	unsigned short *expected_crc,
 	unsigned short *actual_crc
 )
@@ -131,6 +133,9 @@ JAM_RETURN_TYPE jam_check_crc
 	unsigned short tmp_expected_crc = 0;
 	unsigned short tmp_actual_crc = 0;
 	JAM_RETURN_TYPE status = JAMC_SUCCESS;
+
+	jam_program = program;
+	jam_program_size = program_size;
 
 	status = jam_seek(0);
 

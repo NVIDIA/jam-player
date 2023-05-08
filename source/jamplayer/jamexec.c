@@ -10,8 +10,18 @@
 /*					jam_execute_statement() to process statements in		*/
 /*					the JAM source file.									*/
 /*																			*/
+/*	Revisions:		2.4	fixed bug when spaces were present in array			*/
+/*					assignments												*/
+/*																			*/
+/*	Revisions:		1.1	added support for VECTOR CAPTURE and VECTOR COMPARE	*/
+/*					statements												*/
+/*					added support for dynamic memory allocation				*/
+/*					1.2 fixed STATE statement to accept a space-separated	*/
+/*					list of states as well as a comma-separated list		*/
+/*																			*/
 /****************************************************************************/
 
+#include "jamport.h"
 #include "jamexprt.h"
 #include "jamdefs.h"
 #include "jamexec.h"
@@ -22,6 +32,7 @@
 #include "jamheap.h"
 #include "jamarray.h"
 #include "jamjtag.h"
+#include "jamcomp.h"
 
 /****************************************************************************/
 /*																			*/
@@ -35,6 +46,12 @@ char *jam_workspace = NULL;
 /* size of available memory buffer */
 long jam_workspace_size = 0L;
 
+/* pointer to Jam program text */
+char *jam_program = NULL;
+
+/* size of program buffer */
+long jam_program_size = 0L;
+
 /* current position in input stream */
 long jam_current_file_position = 0L;
 
@@ -45,15 +62,303 @@ long jam_current_statement_position = 0L;
 /* current statement, but not necessarily the next one to be executed) */
 long jam_next_statement_position = 0L;
 
+int jam_statement_buffer_size = 0L;
+
+/* name of desired action (Jam 2.0 only) */
+char *jam_action = NULL;
+
 /* pointer to initialization list */
 char **jam_init_list = NULL;
 
 /* buffer for constant literal boolean array data */
-#define JAMC_MAX_LITERAL_ARRAYS 3
+#define JAMC_MAX_LITERAL_ARRAYS 4
 long jam_literal_array_buffer[JAMC_MAX_LITERAL_ARRAYS];
+
+/* buffer for constant literal ACA array data */
+long *jam_literal_aca_buffer[JAMC_MAX_LITERAL_ARRAYS];
 
 /* number of vector signals */
 int jam_vector_signal_count = 0;
+
+/* version of Jam language used:  0 = unknown */
+int jam_version = 0;
+
+/* phase of Jam execution */
+JAME_PHASE_TYPE jam_phase = JAM_UNKNOWN_PHASE;
+
+/* current procedure or data block */
+JAMS_SYMBOL_RECORD *jam_current_block = NULL;
+
+/* this global flag indicates that we are processing the items in */
+/* the "uses" list for a procedure, executing the data blocks if */
+/* they have not yet been initialized, but not calling any procedures */
+BOOL jam_checking_uses_list = FALSE;
+
+/* function prototypes for forward reference */
+JAM_RETURN_TYPE jam_process_data(char *statement_buffer);
+JAM_RETURN_TYPE jam_process_procedure(char *statement_buffer);
+JAM_RETURN_TYPE jam_process_wait(char *statement_buffer);
+JAM_RETURN_TYPE jam_execute_statement(char *statement_buffer, BOOL *done,
+	BOOL *reuse_statement_buffer, int *exit_code);
+
+/* prototype for external function in jamarray.c */
+extern int jam_6bit_char(int ch);
+
+/* prototype for external function in jamsym.c */
+extern BOOL jam_check_init_list(char *name, long *value);
+
+/****************************************************************************/
+/*																			*/
+
+JAM_RETURN_TYPE jam_init_statement_buffer
+(
+	char **statement_buffer,
+	unsigned int *statement_buffer_size
+)
+
+/*																			*/
+/*	Description:	This function reads a full statement from the input		*/
+/*					stream, preprocesses it to remove comments, and stores	*/
+/*					it in a buffer.  If the statement is an array			*/
+/*					declaration the initialization data is not stored in	*/
+/*					the buffer but must be read from the input stream when	*/
+/*					the array is used.										*/
+/*																			*/
+/*	Returns:		JAMC_SUCCESS for success, else appropriate error code	*/
+/*																			*/
+/****************************************************************************/
+{
+	int index = 0;
+	int ch = 0;
+	int last_ch = 0;
+	unsigned int max_index = jam_statement_buffer_size;
+	char tmp_statement_buffer[32] = { 0 };
+	BOOL comment = FALSE;
+	BOOL quoted_string = FALSE;
+	BOOL boolean_array_data = FALSE;
+	BOOL literal_aca_array = FALSE;
+	BOOL label_found = FALSE;
+	BOOL done = (max_index != 0);
+	long position = jam_current_file_position;
+	long first_char_position = -1L;
+	long left_quote_position = -1L;
+	JAM_RETURN_TYPE status = JAMC_SUCCESS;
+
+#if 0
+	label_buffer[0] = JAMC_NULL_CHAR;
+#endif
+	statement_buffer[0] = JAMC_NULL_CHAR;
+
+	if (!done)
+	{
+		jam_seek(0);
+	}
+
+	while (!done)
+	{
+		last_ch = ch;
+		ch = jam_getc();
+
+		if ((!comment) && (!quoted_string))
+		{
+			if (ch == JAMC_COMMENT_CHAR)
+			{
+				/* beginning of comment */
+				comment = TRUE;
+			}
+			else if (ch == JAMC_QUOTE_CHAR)
+			{
+				/* beginning of quoted string */
+				quoted_string = TRUE;
+				left_quote_position = position;
+			}
+			else if (ch == JAMC_COLON_CHAR)
+			{
+				/* statement contains a label */
+				if (label_found)
+				{
+					/* multiple labels found */
+					status = JAMC_SYNTAX_ERROR;
+					done = TRUE;
+				}
+				else if (index <= JAMC_MAX_NAME_LENGTH)
+				{
+#if 0
+					/* copy label into label_buffer */
+					for (label_index = 0; label_index < index; label_index++)
+					{
+						label_buffer[label_index] =
+							statement_buffer[label_index];
+					}
+					label_buffer[index] = JAMC_NULL_CHAR;
+#endif
+					label_found = TRUE;
+
+					/* delete label from statement_buffer */
+					index = 0;
+					statement_buffer[0] = JAMC_NULL_CHAR;
+					first_char_position = -1L;
+					ch = JAMC_SPACE_CHAR;
+				}
+				else
+				{
+					/* label name was too long */
+					status = JAMC_ILLEGAL_SYMBOL;
+					done = TRUE;
+				}
+			}
+			else if ((ch == JAMC_TAB_CHAR) ||
+				(ch == JAMC_NEWLINE_CHAR) ||
+				(ch == JAMC_RETURN_CHAR))
+			{
+				/* convert tab, CR, LF to space character */
+				ch = JAMC_SPACE_CHAR;
+			}
+		}
+
+		/* include the character in the current count */
+		if ((!comment) &&
+			((first_char_position != -1L) || (ch != JAMC_SPACE_CHAR)) &&
+			(quoted_string ||
+				(ch != JAMC_SPACE_CHAR) || (last_ch != JAMC_SPACE_CHAR)))
+		{
+			/* save the character */
+			/* convert to upper case */
+			if (index < 31)
+			{
+				tmp_statement_buffer[index] = (char)
+					(((ch >= 'a') && (ch <= 'z')) ? (ch - ('a' - 'A')) : ch);
+				tmp_statement_buffer[index + 1] = JAMC_NULL_CHAR;
+			}
+
+			++index;
+			if (first_char_position == -1L) first_char_position = position;
+
+			/*
+			*	Whenever we see a right bracket character, check if the
+			*	statement is a Boolean array declaration statement.
+			*/
+			if ((!boolean_array_data) && (ch == JAMC_RBRACKET_CHAR)
+				&& (tmp_statement_buffer[0] == 'B'))
+			{
+				if (jam_strncmp(tmp_statement_buffer, "BOOLEAN", 7) == 0)
+				{
+					boolean_array_data = TRUE;
+				}
+			}
+
+			/*
+			*	Check for literal ACA array assignment
+			*/
+			if ((!quoted_string) && (!boolean_array_data) &&
+				(!literal_aca_array) && (ch == JAMC_AT_CHAR))
+			{
+				/* this is the beginning of a literal ACA array */
+				literal_aca_array = TRUE;
+			}
+
+			if (literal_aca_array &&
+				(!jam_isalnum((char) ch)) &&
+				(ch != JAMC_AT_CHAR) &&
+				(ch != JAMC_UNDERSCORE_CHAR) &&
+				(ch != JAMC_SPACE_CHAR))
+			{
+				/* this is the end of the literal ACA array */
+				literal_aca_array = FALSE;
+			}
+		}
+
+		if ((!comment) && (!quoted_string) && (ch == JAMC_SEMICOLON_CHAR))
+		{
+			/* end of statement */
+			if (!boolean_array_data && (index > (int) max_index))
+			{
+				max_index = (unsigned int) index;
+			}
+			first_char_position = -1L;
+			left_quote_position = -1L;
+			label_found = FALSE;
+			ch = 0;
+			boolean_array_data = FALSE;
+			literal_aca_array = FALSE;
+			index = 0;
+		}
+
+		if (ch == EOF)
+		{
+			/* end of file */
+			done = TRUE;
+		}
+
+		if (comment &&
+			((ch == JAMC_NEWLINE_CHAR) || (ch == JAMC_RETURN_CHAR)))
+		{
+			/* end of comment */
+			comment = FALSE;
+		}
+		else if (quoted_string && (ch == JAMC_QUOTE_CHAR) &&
+			(position > left_quote_position))
+		{
+			/* end of quoted string */
+			quoted_string = FALSE;
+		}
+
+		++position;	/* position of next character to be read */
+	}
+
+	if ((status == JAMC_SUCCESS) && (max_index != 0))
+	{
+		*statement_buffer = (char *) jam_malloc((unsigned int) (max_index + 1024));
+
+		if (*statement_buffer == NULL)
+		{
+			status = JAMC_OUT_OF_MEMORY;
+		}
+		else
+		{
+			if (jam_statement_buffer_size == 0)
+			{
+				jam_seek(jam_current_file_position);
+				jam_current_statement_position = jam_current_file_position;
+				jam_statement_buffer_size = max_index + 1024;
+				jam_export_integer("JAM_STATEMENT_BUFFER_SIZE", jam_statement_buffer_size);
+			}
+
+			*statement_buffer_size = jam_statement_buffer_size;
+		}
+	}
+
+	return (status);
+}
+
+/****************************************************************************/
+/*																			*/
+
+void jam_free_statement_buffer
+(
+	char **statement_buffer,
+	unsigned int *statement_buffer_size
+)
+
+/*																			*/
+/*	Description:	This function reads a full statement from the input		*/
+/*					stream, preprocesses it to remove comments, and stores	*/
+/*					it in a buffer.  If the statement is an array			*/
+/*					declaration the initialization data is not stored in	*/
+/*					the buffer but must be read from the input stream when	*/
+/*					the array is used.										*/
+/*																			*/
+/*	Returns:		JAMC_SUCCESS for success, else appropriate error code	*/
+/*																			*/
+/****************************************************************************/
+{
+	if (statement_buffer && *statement_buffer)
+	{
+		jam_free(*statement_buffer);
+		*statement_buffer = 0;
+		*statement_buffer_size = 0;
+	}
+}
 
 /****************************************************************************/
 /*																			*/
@@ -83,6 +388,7 @@ JAM_RETURN_TYPE jam_get_statement
 	BOOL comment = FALSE;
 	BOOL quoted_string = FALSE;
 	BOOL boolean_array_data = FALSE;
+	BOOL literal_aca_array = FALSE;
 	BOOL label_found = FALSE;
 	BOOL done = FALSE;
 	long position = jam_current_file_position;
@@ -162,7 +468,7 @@ JAM_RETURN_TYPE jam_get_statement
 		{
 			/* save the character */
 			/* convert to upper case except quotes and boolean arrays */
-			if (quoted_string || boolean_array_data)
+			if (quoted_string || boolean_array_data || literal_aca_array)
 			{
 				statement_buffer[index] = (char) ch;
 			}
@@ -185,6 +491,26 @@ JAM_RETURN_TYPE jam_get_statement
 				{
 					boolean_array_data = TRUE;
 				}
+			}
+
+			/*
+			*	Check for literal ACA array assignment
+			*/
+			if ((!quoted_string) && (!boolean_array_data) &&
+				(!literal_aca_array) && (ch == JAMC_AT_CHAR))
+			{
+				/* this is the beginning of a literal ACA array */
+				literal_aca_array = TRUE;
+			}
+
+			if (literal_aca_array &&
+				(!jam_isalnum((char) ch)) &&
+				(ch != JAMC_AT_CHAR) &&
+				(ch != JAMC_UNDERSCORE_CHAR) &&
+				(ch != JAMC_SPACE_CHAR))
+			{
+				/* this is the end of the literal ACA array */
+				literal_aca_array = FALSE;
 			}
 		}
 
@@ -248,14 +574,19 @@ struct JAMS_INSTR_MAP
 	char string[JAMC_MAX_INSTR_LENGTH + 1];
 } jam_instruction_table[] =
 {
+	{ JAM_ACTION_INSTR,  "ACTION"  },
 	{ JAM_BOOLEAN_INSTR, "BOOLEAN" },
 	{ JAM_CALL_INSTR,    "CALL"    },
 	{ JAM_CRC_INSTR,     "CRC"     },
+	{ JAM_DATA_INSTR,    "DATA"    },
 	{ JAM_DRSCAN_INSTR,  "DRSCAN"  },
 	{ JAM_DRSTOP_INSTR,  "DRSTOP"  },
+	{ JAM_ENDDATA_INSTR, "ENDDATA" },
+	{ JAM_ENDPROC_INSTR, "ENDPROC" },
 	{ JAM_EXIT_INSTR,    "EXIT"    },
 	{ JAM_EXPORT_INSTR,  "EXPORT"  },
 	{ JAM_FOR_INSTR,     "FOR"     },
+	{ JAM_FREQUENCY_INSTR, "FREQUENCY" },
 	{ JAM_GOTO_INSTR,    "GOTO"    },
 	{ JAM_IF_INSTR,      "IF"      },
 	{ JAM_INTEGER_INSTR, "INTEGER" },
@@ -266,11 +597,17 @@ struct JAMS_INSTR_MAP
 	{ JAM_NOTE_INSTR,    "NOTE"    },
 	{ JAM_PADDING_INSTR, "PADDING" },
 	{ JAM_POP_INSTR,     "POP"     },
+	{ JAM_POSTDR_INSTR,  "POSTDR"  },
+	{ JAM_POSTIR_INSTR,  "POSTIR"  },
+	{ JAM_PREDR_INSTR,   "PREDR"   },
+	{ JAM_PREIR_INSTR,   "PREIR"   },
 	{ JAM_PRINT_INSTR,   "PRINT"   },
+	{ JAM_PROCEDURE_INSTR, "PROCEDURE" },
 	{ JAM_PUSH_INSTR,    "PUSH"    },
 	{ JAM_REM_INSTR,     "REM"     },
 	{ JAM_RETURN_INSTR,  "RETURN"  },
 	{ JAM_STATE_INSTR,   "STATE"   },
+	{ JAM_TRST_INSTR,    "TRST"    },
 	{ JAM_VECTOR_INSTR,  "VECTOR"  },
 	{ JAM_VMAP_INSTR,    "VMAP"    },
 	{ JAM_WAIT_INSTR,    "WAIT"    }
@@ -344,6 +681,12 @@ JAME_INSTRUCTION jam_get_instruction
 				{
 					done = FALSE;
 				}
+			}
+
+			if (done &&
+				(jam_instruction_table[index].string[length] != '\0'))
+			{
+				done = FALSE;
 			}
 
 			if (done)
@@ -449,6 +792,7 @@ int jam_find_keyword
 
 JAM_RETURN_TYPE jam_get_array_subrange
 (
+	JAMS_SYMBOL_RECORD *symbol_record,
 	char *statement_buffer,
 	long *start_index,
 	long *stop_index
@@ -473,8 +817,8 @@ JAM_RETURN_TYPE jam_get_array_subrange
 
 	while ((statement_buffer[index] != JAMC_NULL_CHAR) && !found_elipsis)
 	{
-		if ((statement_buffer[index] == '.') &&
-			(statement_buffer[index + 1] == '.'))
+		if ((statement_buffer[index] == JAMC_PERIOD_CHAR) &&
+			(statement_buffer[index + 1] == JAMC_PERIOD_CHAR))
 		{
 			expr_end = index;
 			found_elipsis = TRUE;
@@ -529,6 +873,188 @@ JAM_RETURN_TYPE jam_get_array_subrange
 		status = JAMC_SYNTAX_ERROR;
 	}
 
+	if ((jam_version == 2) && (!found_elipsis) && (symbol_record != NULL))
+	{
+		/* if there is nothing between the brackets, select the entire array */
+		index = 0;
+
+		while (jam_isspace(statement_buffer[index])) ++index;
+
+		if (statement_buffer[index] == JAMC_NULL_CHAR)
+		{
+			JAMS_HEAP_RECORD *heap_record =
+				(JAMS_HEAP_RECORD *) symbol_record->value;
+
+			if (heap_record == NULL)
+			{
+				status = JAMC_INTERNAL_ERROR;
+			}
+			else
+			{
+				*start_index = heap_record->dimension - 1;
+				*stop_index = 0;
+				status = JAMC_SUCCESS;
+			}
+		}
+	}
+
+	if ((status == JAMC_SUCCESS) && (jam_version == 2))
+	{
+		/* for Jam 2.0, swap the start and stop indices */
+		long temp = *start_index;
+		*start_index = *stop_index;
+		*stop_index = temp;
+	}
+
+	return (status);
+}
+
+/****************************************************************************/
+/*																			*/
+
+JAM_RETURN_TYPE jam_convert_literal_binary
+(
+	char *statement_buffer,
+	long **output_buffer,
+	long *length,
+	int arg
+)
+
+/*																			*/
+/*	Description:	converts BINARY string in statement buffer into binary	*/
+/*					values.  Stores binary result back into the buffer,		*/
+/*					overwriting the input text.								*/
+/*																			*/
+/*	Returns:		JAMC_SUCCESS for success, else appropriate error code	*/
+/*																			*/
+/****************************************************************************/
+{
+	BOOL is_space = FALSE;
+	int in_index = 0;
+	int out_index = 0;
+	int rev_index = 0;
+	int i = 0;
+	int j = 0;
+	char ch = 0;
+	int data = 0;
+	long *long_ptr = NULL;
+	JAM_RETURN_TYPE status = JAMC_SUCCESS;
+
+	while ((status == JAMC_SUCCESS) &&
+		((ch = statement_buffer[i]) != '\0'))
+	{
+		if ((ch == '0') || (ch == '1'))
+		{
+			data = (int) (ch - '0');
+		}
+		else if (jam_isspace(ch))
+		{
+			is_space = TRUE;
+		}
+		else
+		{
+			status = JAMC_SYNTAX_ERROR;
+		}
+
+		if (status == JAMC_SUCCESS)
+		{
+			if (is_space)
+			{
+				--in_index;
+				is_space = FALSE;
+			}
+			else
+			{
+				if ((in_index & 7) == 0)
+				{
+					statement_buffer[out_index] = 0;
+				}
+
+				if (data)
+				{
+					statement_buffer[out_index] |= (1 << (in_index & 7));
+				}
+
+				if ((in_index & 7) == 7)
+				{
+					++out_index;
+				}
+			}
+		}
+
+		++in_index;
+		++i;
+	}
+
+	if (status == JAMC_SUCCESS)
+	{
+		*length = (long) in_index;
+
+		/* reverse the order of binary data */
+		rev_index = in_index / 2;
+		while (rev_index > 0)
+		{
+			data = (statement_buffer[(rev_index - 1) >> 3] &
+				(1 << ((rev_index - 1) & 7)));
+
+			if (statement_buffer[(in_index - rev_index) >> 3] &
+				(1 << ((in_index - rev_index) & 7)))
+			{
+				statement_buffer[(rev_index - 1) >> 3] |=
+					(1 << ((rev_index - 1) & 7));
+			}
+			else
+			{
+				statement_buffer[(rev_index - 1) >> 3] &=
+					~(1 << ((rev_index - 1) & 7));
+			}
+
+			if (data)
+			{
+				statement_buffer[(in_index - rev_index) >> 3] |=
+					(1 << ((in_index - rev_index) & 7));
+			}
+			else
+			{
+				statement_buffer[(in_index - rev_index) >> 3] &=
+					~(1 << ((in_index - rev_index) & 7));
+			}
+
+			--rev_index;
+		}
+
+		out_index = (in_index + 7) / 8;		/* number of bytes */
+		rev_index = (out_index + 3) / 4;	/* number of longs */
+
+		if (rev_index > 1)
+		{
+			long_ptr = (long *) (((long) statement_buffer) & 0xfffffffcL);
+		}
+		else if (arg < JAMC_MAX_LITERAL_ARRAYS)
+		{
+			long_ptr = &jam_literal_array_buffer[arg];
+		}
+		else
+		{
+			status = JAMC_INTERNAL_ERROR;
+		}
+	}
+
+	if (status == JAMC_SUCCESS)
+	{
+		for (i = 0; i < rev_index; ++i)
+		{
+			j = i * 4;
+			long_ptr[i] = (
+				(((long)statement_buffer[j + 3] << 24L) & 0xff000000L) |
+				(((long)statement_buffer[j + 2] << 16L) & 0x00ff0000L) |
+				(((long)statement_buffer[j + 1] <<  8L) & 0x0000ff00L) |
+				(((long)statement_buffer[j    ]       ) & 0x000000ffL));
+		}
+
+		if (output_buffer != NULL) *output_buffer = long_ptr;
+	}
+
 	return (status);
 }
 
@@ -552,6 +1078,7 @@ JAM_RETURN_TYPE jam_convert_literal_array
 /*																			*/
 /****************************************************************************/
 {
+	BOOL is_space = FALSE;
 	int in_index = 0;
 	int out_index = 0;
 	int rev_index = 0;
@@ -562,10 +1089,8 @@ JAM_RETURN_TYPE jam_convert_literal_array
 	long *long_ptr = NULL;
 	JAM_RETURN_TYPE status = JAMC_SUCCESS;
 
-	arg = arg;
-
 	while ((status == JAMC_SUCCESS) &&
-		((ch = statement_buffer[in_index]) != '\0'))
+		((ch = statement_buffer[i]) != '\0'))
 	{
 		if ((ch >= 'A') && (ch <= 'F'))
 		{
@@ -579,6 +1104,10 @@ JAM_RETURN_TYPE jam_convert_literal_array
 		{
 			data = (int) (ch - '0');
 		}
+		else if (jam_isspace(ch))
+		{
+			is_space = TRUE;
+		}
 		else
 		{
 			status = JAMC_SYNTAX_ERROR;
@@ -586,21 +1115,30 @@ JAM_RETURN_TYPE jam_convert_literal_array
 
 		if (status == JAMC_SUCCESS)
 		{
-			if (in_index & 1)
+			if (is_space)
 			{
-				/* odd nibble is lower nibble */
-				data |= (statement_buffer[out_index] & 0xf0);
-				statement_buffer[out_index] = (char) data;
-				++out_index;
+				--in_index;
+				is_space = FALSE;
 			}
 			else
 			{
-				/* even nibble is upper nibble */
-				statement_buffer[out_index] = (char) (data << 4);
+				if (in_index & 1)
+				{
+					/* odd nibble is lower nibble */
+					data |= (statement_buffer[out_index] & 0xf0);
+					statement_buffer[out_index] = (char) data;
+						++out_index;
+				}
+				else
+				{
+					/* even nibble is upper nibble */
+					statement_buffer[out_index] = (char) (data << 4);
+				}
 			}
 		}
 
 		++in_index;
+		++i;
 	}
 
 	if (status == JAMC_SUCCESS)
@@ -672,6 +1210,174 @@ JAM_RETURN_TYPE jam_convert_literal_array
 /****************************************************************************/
 /*																			*/
 
+JAM_RETURN_TYPE jam_convert_literal_aca
+(
+	char *statement_buffer,
+	long **output_buffer,
+	long *length,
+	int arg
+)
+/*																			*/
+/*	Description:	Uncompress ASCII ACA data in "statement buffer".		*/
+/*					Store resulting uncompressed literal data in global var */
+/*					jam_literal_aca_buffer									*/
+/*																			*/
+/*	Returns:		JAMC_SUCCESS for success, else appropriate error		*/
+/*																			*/
+/****************************************************************************/
+{
+	int bit = 0;
+	int value = 0;
+	int index = 0;
+	int index2 = 0;
+	int i = 0;
+	int j = 0;
+	int long_count = 0;
+	long binary_compressed_length = 0L;
+	long uncompressed_length = 0L;
+	char *buffer = NULL;
+	long *long_ptr = NULL;
+	long out_size = 0L;
+	long address = 0L;
+	JAM_RETURN_TYPE status = JAMC_SUCCESS;
+
+	if ((arg < 0) || (arg >= JAMC_MAX_LITERAL_ARRAYS))
+	{
+		status = JAMC_INTERNAL_ERROR;
+	}
+
+	/* remove all white space */
+	while (statement_buffer[index] != JAMC_NULL_CHAR)
+	{
+		if ((!jam_isspace(statement_buffer[index])) &&
+			(statement_buffer[index] != JAMC_TAB_CHAR) &&
+			(statement_buffer[index] != JAMC_RETURN_CHAR) &&
+			(statement_buffer[index] != JAMC_NEWLINE_CHAR))
+		{
+			statement_buffer[index2] = statement_buffer[index];
+			++index2;
+		}
+		++index;
+	}
+	statement_buffer[index2] = JAMC_NULL_CHAR;
+
+	/* convert 6-bit encoded characters to binary -- in the same buffer */
+	index = 0;
+	while ((status == JAMC_SUCCESS) &&
+		(jam_isalnum(statement_buffer[index]) ||
+		(statement_buffer[index] == JAMC_AT_CHAR) ||
+		(statement_buffer[index] == JAMC_UNDERSCORE_CHAR)))
+	{
+		value = jam_6bit_char(statement_buffer[index]);
+		statement_buffer[index] = 0;
+
+		if (value == -1)
+		{
+			status = JAMC_SYNTAX_ERROR;
+		}
+		else
+		{
+			for (bit = 0; bit < 6; ++bit)
+			{
+				if (value & (1 << (bit % 6)))
+				{
+					statement_buffer[address >> 3] |= (1L << (address & 7));
+				}
+				else
+				{
+					statement_buffer[address >> 3] &=
+						~(unsigned int) (1 << (address & 7));
+				}
+				++address;
+			}
+		}
+
+		++index;
+	}
+
+	if ((status == JAMC_SUCCESS) &&
+		(statement_buffer[index] != JAMC_NULL_CHAR))
+	{
+		status = JAMC_SYNTAX_ERROR;
+	}
+
+	/* Compute length of binary data string in statement_buffer */
+	binary_compressed_length = (address >> 3) + ((address & 7) ? 1 : 0);
+
+	/* Get uncompressed length from first DWORD of compressed data */
+	uncompressed_length = (
+		(((long)statement_buffer[3] << 24L) & 0xff000000L) |
+		(((long)statement_buffer[2] << 16L) & 0x00ff0000L) |
+		(((long)statement_buffer[1] <<  8L) & 0x0000ff00L) |
+		(((long)statement_buffer[0]       ) & 0x000000ffL));
+
+	/* Allocate memory for literal binary data */
+	if (status == JAMC_SUCCESS)
+	{
+#if PORT==DOS
+		if ((uncompressed_length + 4) < 0x10000L)
+		{
+			buffer = jam_malloc((unsigned int) (uncompressed_length + 4));
+			long_ptr = (long *) jam_malloc((unsigned int) (uncompressed_length + 4));
+		}
+#else
+		buffer = jam_malloc(uncompressed_length + 4);
+		long_ptr = (long *) jam_malloc(uncompressed_length + 4);
+#endif
+
+		if ((buffer == NULL) || (long_ptr == NULL))
+		{
+			status = JAMC_OUT_OF_MEMORY;
+		}
+	}
+
+	/* Uncompress encoded binary into literal binary data */
+	out_size = jam_uncompress(
+		statement_buffer,
+		binary_compressed_length,
+		buffer,
+		uncompressed_length,
+		jam_version);
+
+	if (out_size != uncompressed_length)
+	{
+		status = JAMC_SYNTAX_ERROR;
+	}
+
+	if (status == JAMC_SUCCESS)
+	{
+		/*
+		*	Convert uncompressed data to array of long integers
+		*/
+		long_count = (out_size + 3) / 4;	/* number of longs */
+
+		for (i = 0; i < long_count; ++i)
+		{
+			j = i * 4;
+			long_ptr[i] = (
+				(((long)buffer[j + 3] << 24L) & 0xff000000L) |
+				(((long)buffer[j + 2] << 16L) & 0x00ff0000L) |
+				(((long)buffer[j + 1] <<  8L) & 0x0000ff00L) |
+				(((long)buffer[j    ]       ) & 0x000000ffL));
+		}
+
+		jam_literal_aca_buffer[arg] = long_ptr;
+
+		if (output_buffer != NULL) *output_buffer = long_ptr;
+
+		if (length != NULL) *length = uncompressed_length * 8L;
+	}
+
+	if (buffer != NULL) jam_free(buffer);
+
+	/* jam_literal_aca_buffer[arg] will be freed later */
+
+	return (status);
+}
+
+/****************************************************************************/
+/*																			*/
+
 JAM_RETURN_TYPE jam_get_array_argument
 (
 	char *statement_buffer,
@@ -699,6 +1405,7 @@ JAM_RETURN_TYPE jam_get_array_argument
 	char save_ch = 0;
 	JAMS_SYMBOL_RECORD *tmp_symbol_rec = NULL;
 	JAMS_HEAP_RECORD *heap_record = NULL;
+	JAME_EXPRESSION_TYPE expr_type = JAM_ILLEGAL_EXPR_TYPE;
 	JAM_RETURN_TYPE status = JAMC_SUCCESS;
 
 	/* first look for literal array constant */
@@ -708,7 +1415,154 @@ JAM_RETURN_TYPE jam_get_array_argument
 		++index;	/* skip over white space */
 	}
 
-	if (jam_isdigit(statement_buffer[index]))
+	if ((jam_version == 2) && (statement_buffer[index] == JAMC_POUND_CHAR))
+	{
+		/* literal array, binary representation */
+		*symbol_record = NULL;
+		++index;
+		while ((jam_isspace(statement_buffer[index])) &&
+			(index < JAMC_MAX_STATEMENT_LENGTH))
+		{
+			++index;	/* skip over white space */
+		}
+		expr_begin = index;
+
+		while ((statement_buffer[index] != JAMC_NULL_CHAR) &&
+			(statement_buffer[index] != JAMC_COMMA_CHAR) &&
+			(statement_buffer[index] != JAMC_SEMICOLON_CHAR) &&
+			(index < JAMC_MAX_STATEMENT_LENGTH))
+		{
+			++index;
+		}
+		while ((index > expr_begin) && jam_isspace(statement_buffer[index - 1]))
+		{
+			--index;
+		}
+		expr_end = index;
+		save_ch = statement_buffer[expr_end];
+		statement_buffer[expr_end] = JAMC_NULL_CHAR;
+		status = jam_convert_literal_binary(&statement_buffer[expr_begin],
+			literal_array_data, &literal_array_length, arg);
+		statement_buffer[expr_end] = save_ch;
+
+		*start_index = 0L;
+		*stop_index = literal_array_length - 1;
+	}
+	else if ((jam_version == 2) &&
+		(statement_buffer[index] == JAMC_DOLLAR_CHAR))
+	{
+		/* literal array, hex representation */
+		*symbol_record = NULL;
+		++index;
+		while ((jam_isspace(statement_buffer[index])) &&
+			(index < JAMC_MAX_STATEMENT_LENGTH))
+		{
+			++index;	/* skip over white space */
+		}
+		expr_begin = index;
+
+		while ((statement_buffer[index] != JAMC_NULL_CHAR) &&
+			(statement_buffer[index] != JAMC_COMMA_CHAR) &&
+			(statement_buffer[index] != JAMC_SEMICOLON_CHAR) &&
+			(index < JAMC_MAX_STATEMENT_LENGTH))
+		{
+			++index;
+		}
+		while ((index > expr_begin) && jam_isspace(statement_buffer[index - 1]))
+		{
+			--index;
+		}
+		expr_end = index;
+		save_ch = statement_buffer[expr_end];
+		statement_buffer[expr_end] = JAMC_NULL_CHAR;
+		status = jam_convert_literal_array(&statement_buffer[expr_begin],
+			literal_array_data, &literal_array_length, arg);
+		statement_buffer[expr_end] = save_ch;
+
+		*start_index = 0L;
+		*stop_index = literal_array_length - 1;
+	}
+	else if ((jam_version == 2) && (statement_buffer[index] == JAMC_AT_CHAR))
+	{
+		/* literal array, ACA representation */
+		*symbol_record = NULL;
+		++index;
+		while ((jam_isspace(statement_buffer[index])) &&
+			(index < JAMC_MAX_STATEMENT_LENGTH))
+		{
+			++index;	/* skip over white space */
+		}
+		expr_begin = index;
+
+		while ((statement_buffer[index] != JAMC_NULL_CHAR) &&
+			(statement_buffer[index] != JAMC_COMMA_CHAR) &&
+			(statement_buffer[index] != JAMC_SEMICOLON_CHAR) &&
+			(index < JAMC_MAX_STATEMENT_LENGTH))
+		{
+			++index;
+		}
+		while ((index > expr_begin) && jam_isspace(statement_buffer[index - 1]))
+		{
+			--index;
+		}
+		expr_end = index;
+		save_ch = statement_buffer[expr_end];
+		statement_buffer[expr_end] = JAMC_NULL_CHAR;
+		status = jam_convert_literal_aca(&statement_buffer[expr_begin],
+			literal_array_data, &literal_array_length, arg);
+		statement_buffer[expr_end] = save_ch;
+
+		*start_index = 0L;
+		*stop_index = literal_array_length - 1;
+	}
+	else if ((jam_version == 2) &&
+		(jam_strncmp(&statement_buffer[index], "BOOL(", 5) == 0))
+	{
+		/*
+		*	Convert integer expression to Boolean array
+		*/
+		expr_begin = index + 4;
+		while ((statement_buffer[index] != JAMC_NULL_CHAR) &&
+			(statement_buffer[index] != JAMC_COMMA_CHAR) &&
+			(statement_buffer[index] != JAMC_SEMICOLON_CHAR) &&
+			(index < JAMC_MAX_STATEMENT_LENGTH))
+		{
+			++index;
+		}
+
+		expr_end = index;
+		++index;
+
+		if (expr_end > expr_begin)
+		{
+			save_ch = statement_buffer[expr_end];
+			statement_buffer[expr_end] = JAMC_NULL_CHAR;
+			status = jam_evaluate_expression(
+				&statement_buffer[expr_begin],
+				&jam_literal_array_buffer[arg],
+				&expr_type);
+			statement_buffer[expr_end] = save_ch;
+		}
+
+		/*
+		*	Check for integer expression
+		*/
+		if ((status == JAMC_SUCCESS) &&
+			(expr_type != JAM_INTEGER_EXPR) &&
+			(expr_type != JAM_INT_OR_BOOL_EXPR))
+		{
+			status = JAMC_TYPE_MISMATCH;
+		}
+
+		if (status == JAMC_SUCCESS)
+		{
+			*symbol_record = NULL;
+			*literal_array_data = &jam_literal_array_buffer[arg];
+			*start_index = 0L;
+			*stop_index = 31L;
+		}
+	}
+	else if ((jam_version != 2) && (jam_isdigit(statement_buffer[index])))
 	{
 		/* it is a literal array constant */
 		*symbol_record = NULL;
@@ -758,14 +1612,11 @@ JAM_RETURN_TYPE jam_get_array_argument
 
 			save_ch = statement_buffer[expr_end];
 			statement_buffer[expr_end] = JAMC_NULL_CHAR;
-			tmp_symbol_rec = jam_get_symbol_record(&statement_buffer[expr_begin]);
+			status = jam_get_symbol_record(&statement_buffer[expr_begin],
+				&tmp_symbol_rec);
 			statement_buffer[expr_end] = save_ch;
 
-			if (tmp_symbol_rec == NULL)
-			{
-				status = JAMC_UNDEFINED_SYMBOL;
-			}
-			else
+			if (status == JAMC_SUCCESS)
 			{
 				*symbol_record = tmp_symbol_rec;
 
@@ -803,7 +1654,7 @@ JAM_RETURN_TYPE jam_get_array_argument
 					{
 						statement_buffer[index] = JAMC_NULL_CHAR;
 
-						status = jam_get_array_subrange(
+						status = jam_get_array_subrange(tmp_symbol_rec,
 							&statement_buffer[expr_end + 1],
 							start_index, stop_index);
 						statement_buffer[index] = JAMC_RBRACKET_CHAR;
@@ -910,6 +1761,995 @@ JAM_RETURN_TYPE jam_find_argument
 /****************************************************************************/
 /*																			*/
 
+JAM_RETURN_TYPE jam_process_uses_item
+(
+	char *block_name
+)
+
+/*																			*/
+/*	Description:	Checks validity of one block-name from a USES clause.	*/
+/*					If it is a data block name, initialize the data block.	*/
+/*																			*/
+/*	Returns:		JAMC_SUCCESS for success, else appropriate error code	*/
+/*																			*/
+/****************************************************************************/
+{
+	int index = 0;
+	char save_ch = 0;
+	JAM_RETURN_TYPE status = JAMC_SYNTAX_ERROR;
+	JAMS_SYMBOL_RECORD *symbol_record = NULL;
+	long current_position = 0L;
+	long return_position = jam_next_statement_position;
+	long block_position = -1L;
+	char block_buffer[JAMC_MAX_NAME_LENGTH + 1];
+	char label_buffer[JAMC_MAX_NAME_LENGTH + 1];
+	char *statement_buffer = NULL;
+	unsigned int statement_buffer_size = 0;
+	JAME_INSTRUCTION instruction_code = JAM_ILLEGAL_INSTR;
+	BOOL found = FALSE;
+	BOOL enddata = FALSE;
+	JAMS_STACK_RECORD *original_stack_position = NULL;
+	BOOL reuse_statement_buffer = FALSE;
+	JAMS_SYMBOL_RECORD *tmp_current_block = jam_current_block;
+	JAME_PHASE_TYPE tmp_phase = jam_phase;
+	BOOL done = FALSE;
+	int exit_code = 0;
+
+
+	status = jam_init_statement_buffer(&statement_buffer, &statement_buffer_size);
+
+	if ((status == JAMC_SUCCESS) && jam_isalpha(block_name[index]))
+	{
+		/* locate block name */
+		while ((jam_is_name_char(block_name[index])) &&
+			(index < JAMC_MAX_STATEMENT_LENGTH))
+		{
+			++index;	/* skip over block name */
+		}
+
+		/*
+		*	Look in symbol table for block name
+		*/
+		save_ch = block_name[index];
+		block_name[index] = JAMC_NULL_CHAR;
+		jam_strcpy(block_buffer, block_name);
+		block_name[index] = save_ch;
+		status = jam_get_symbol_record(block_buffer, &symbol_record);
+
+		if ((status == JAMC_SUCCESS) &&
+			((symbol_record->type == JAM_PROCEDURE_BLOCK) ||
+			(symbol_record->type == JAM_DATA_BLOCK)))
+		{
+			/*
+			*	Name is defined - get the address of the block
+			*/
+			block_position = symbol_record->position;
+		}
+		else if (status == JAMC_UNDEFINED_SYMBOL)
+		{
+			/*
+			*	Block name is not defined... may be a forward reference.
+			*	Search through the file to find the symbol.
+			*/
+			current_position = jam_current_statement_position;
+
+			status = JAMC_SUCCESS;
+
+			while ((!found) && (status == JAMC_SUCCESS))
+			{
+				/*
+				*	Get statements without executing them
+				*/
+				status = jam_get_statement(statement_buffer, label_buffer);
+
+				if ((status == JAMC_SUCCESS) &&
+					(label_buffer[0] != JAMC_NULL_CHAR) &&
+					(jam_version != 2))
+				{
+					/*
+					*	If there is a label, add it to the symbol table
+					*/
+					status = jam_add_symbol(JAM_LABEL, label_buffer, 0L,
+						jam_current_statement_position);
+				}
+
+				/*
+				*	Is this a PROCEDURE or DATA statement?
+				*/
+				if (status == JAMC_SUCCESS)
+				{
+					instruction_code = jam_get_instruction(statement_buffer);
+
+					switch (instruction_code)
+					{
+					case JAM_DATA_INSTR:
+						status = jam_process_data(statement_buffer);
+
+						/* check if this is the block we want to process */
+						if (status == JAMC_SUCCESS)
+						{
+							status = jam_get_symbol_record(block_buffer,
+								&symbol_record);
+
+							if (status == JAMC_SUCCESS)
+							{
+								found = TRUE;
+								block_position = symbol_record->position;
+							}
+							else if (status == JAMC_UNDEFINED_SYMBOL)
+							{
+								/* ignore undefined symbol errors */
+								status = JAMC_SUCCESS;
+							}
+						}
+						break;
+
+					case JAM_PROCEDURE_INSTR:
+						status = jam_process_procedure(statement_buffer);
+
+						/* check if this is the block we want to process */
+						if (status == JAMC_SUCCESS)
+						{
+							status = jam_get_symbol_record(block_buffer,
+								&symbol_record);
+
+							if (status == JAMC_SUCCESS)
+							{
+								found = TRUE;
+								block_position = symbol_record->position;
+							}
+							else if (status == JAMC_UNDEFINED_SYMBOL)
+							{
+								/* ignore undefined symbol errors */
+								status = JAMC_SUCCESS;
+							}
+						}
+						break;
+					default:
+						break;
+					}
+				}
+			}
+
+			if (!found)
+			{
+				/* label was not found -- report "undefined symbol" */
+				/* rather than "unexpected EOF" */
+				status = JAMC_UNDEFINED_SYMBOL;
+
+				/* seek to location of the ACTION or PROCEDURE statement */
+				/* that caused the error */
+				jam_seek(current_position);
+				jam_current_file_position = current_position;
+				jam_current_statement_position = current_position;
+			}
+		}
+
+		if ((status == JAMC_SUCCESS) &&
+			((block_position == (-1L)) || (symbol_record == NULL)))
+		{
+			status = JAMC_INTERNAL_ERROR;
+		}
+
+		if ((status == JAMC_SUCCESS) &&
+			(symbol_record->type != JAM_PROCEDURE_BLOCK) &&
+			(symbol_record->type != JAM_DATA_BLOCK))
+		{
+			status = JAMC_SYNTAX_ERROR;
+		}
+
+		/*
+		*	Call a data block to initialize the variables inside
+		*/
+		if ((status == JAMC_SUCCESS) &&
+			(symbol_record->type == JAM_DATA_BLOCK) &&
+			(symbol_record->value == 0))
+		{
+			/*
+			*	Push a CALL record onto the stack
+			*/
+			if (status == JAMC_SUCCESS)
+			{
+				original_stack_position = jam_peek_stack_record();
+				status = jam_push_callret_record(return_position);
+			}
+
+			/*
+			*	Now seek to the desired position so we can execute that
+			*	statement next
+			*/
+			if (status == JAMC_SUCCESS)
+			{
+				if (jam_seek(block_position) == 0)
+				{
+					jam_current_file_position = block_position;
+				}
+				else
+				{
+					/* seek failed */
+					status = JAMC_IO_ERROR;
+				}
+			}
+
+			/*
+			*	Set jam_current_block to the data block about to be executed
+			*/
+			if (status == JAMC_SUCCESS)
+			{
+				jam_current_block = symbol_record;
+				jam_phase = JAM_DATA_PHASE;
+			}
+
+			/*
+			*	Get program statements and execute them
+			*/
+			while ((!(done)) && (!enddata) && (status == JAMC_SUCCESS))
+			{
+				if (!reuse_statement_buffer)
+				{
+					status = jam_get_statement
+					(
+						statement_buffer,
+						label_buffer
+					);
+
+					if ((status == JAMC_SUCCESS)
+						&& (label_buffer[0] != JAMC_NULL_CHAR))
+					{
+						status = jam_add_symbol
+						(
+							JAM_LABEL,
+							label_buffer,
+							0L,
+							jam_current_statement_position
+						);
+					}
+				}
+				else
+				{
+					/* statement buffer will be reused -- clear the flag */
+					reuse_statement_buffer = FALSE;
+				}
+
+				if (status == JAMC_SUCCESS)
+				{
+					status = jam_execute_statement
+					(
+						statement_buffer,
+						&done,
+						&reuse_statement_buffer,
+						&exit_code
+					);
+
+					if ((status == JAMC_SUCCESS) &&
+						(jam_get_instruction(statement_buffer)
+							== JAM_ENDDATA_INSTR) &&
+						(jam_peek_stack_record() == original_stack_position))
+					{
+						enddata = TRUE;
+					}
+				}
+			}
+
+			if (done && (status == JAMC_SUCCESS))
+			{
+				/* an EXIT statement was processed -- impossible! */
+				status = JAMC_INTERNAL_ERROR;
+			}
+
+			/* indicate that this data block has been initialized */
+			symbol_record->value = 1;
+		}
+	}
+
+	jam_current_block = tmp_current_block;
+	jam_phase = tmp_phase;
+
+	jam_free_statement_buffer(&statement_buffer, &statement_buffer_size);
+
+	return (status);
+}
+
+JAM_RETURN_TYPE jam_process_uses_list
+(
+	char *uses_list
+)
+{
+	JAM_RETURN_TYPE status = JAMC_SUCCESS;
+	int name_begin = 0;
+	int name_end = 0;
+	int index = 0;
+	char save_ch = 0;
+
+	jam_checking_uses_list = TRUE;
+
+	while ((status == JAMC_SUCCESS) &&
+		(uses_list[index] != JAMC_SEMICOLON_CHAR) &&
+		(uses_list[index] != (int)NULL) &&
+		(index < JAMC_MAX_STATEMENT_LENGTH))
+	{
+		while ((jam_isspace(uses_list[index])) &&
+			(index < JAMC_MAX_STATEMENT_LENGTH))
+		{
+			++index;	/* skip over white space */
+		}
+
+		name_begin = index;
+
+		while ((jam_is_name_char(uses_list[index])) &&
+			(index < JAMC_MAX_STATEMENT_LENGTH))
+		{
+			++index;	/* skip over procedure name */
+		}
+
+		name_end = index;
+
+		while ((jam_isspace(uses_list[index])) &&
+			(index < JAMC_MAX_STATEMENT_LENGTH))
+		{
+			++index;	/* skip over white space */
+		}
+
+		if ((name_end > name_begin) &&
+			((uses_list[index] == JAMC_COMMA_CHAR) ||
+			(uses_list[index] == JAMC_SEMICOLON_CHAR)))
+		{
+			save_ch = uses_list[name_end];
+			uses_list[name_end] = JAMC_NULL_CHAR;
+			status = jam_process_uses_item(&uses_list[name_begin]);
+			uses_list[name_end] = save_ch;
+
+			if (uses_list[index] == JAMC_COMMA_CHAR)
+			{
+				++index;	/* skip over comma */
+			}
+		}
+		else
+		{
+			status = JAMC_SYNTAX_ERROR;
+		}
+	}
+
+	if ((status == JAMC_SUCCESS) &&
+		(uses_list[index] != JAMC_SEMICOLON_CHAR))
+	{
+		status = JAMC_SYNTAX_ERROR;
+	}
+
+	jam_checking_uses_list = FALSE;
+
+	return (status);
+}
+
+/****************************************************************************/
+/*																			*/
+
+JAM_RETURN_TYPE jam_call_procedure
+(
+	char *procedure_name,
+	BOOL *done,
+	int *exit_code
+)
+
+/*																			*/
+/*	Description:	Calls the specified procedure, and executes the			*/
+/*					statements in the procedure.							*/
+/*																			*/
+/*	Returns:		JAMC_SUCCESS for success, else appropriate error code	*/
+/*																			*/
+/****************************************************************************/
+{
+	int index = 0;
+	char save_ch = 0;
+	JAM_RETURN_TYPE status = JAMC_SYNTAX_ERROR;
+	JAMS_SYMBOL_RECORD *symbol_record = NULL;
+	JAME_INSTRUCTION instruction_code = JAM_ILLEGAL_INSTR;
+	long current_position = 0L;
+	long proc_position = -1L;
+	long return_position = jam_next_statement_position;
+	char procedure_buffer[JAMC_MAX_NAME_LENGTH + 1];
+	char label_buffer[JAMC_MAX_NAME_LENGTH + 1];
+	char *statement_buffer = NULL;
+	unsigned int statement_buffer_size = 0;
+	BOOL found = FALSE;
+	BOOL endproc = FALSE;
+	JAMS_STACK_RECORD *original_stack_position = NULL;
+	BOOL reuse_statement_buffer = FALSE;
+	JAMS_HEAP_RECORD *heap_record = NULL;
+	JAMS_SYMBOL_RECORD *tmp_current_block = jam_current_block;
+	JAME_PHASE_TYPE tmp_phase = jam_phase;
+
+
+	status = jam_init_statement_buffer(&statement_buffer, &statement_buffer_size);
+
+	if ((status == JAMC_SUCCESS) && jam_isalpha(procedure_name[index]))
+	{
+		/* locate procedure name */
+		while ((jam_is_name_char(procedure_name[index])) &&
+			(index < JAMC_MAX_STATEMENT_LENGTH))
+		{
+			++index;	/* skip over procedure name */
+		}
+
+		/*
+		*	Look in symbol table for procedure name
+		*/
+		save_ch = procedure_name[index];
+		procedure_name[index] = JAMC_NULL_CHAR;
+		jam_strcpy(procedure_buffer, procedure_name);
+		procedure_name[index] = save_ch;
+		status = jam_get_symbol_record(procedure_buffer, &symbol_record);
+
+		if ((status == JAMC_SUCCESS) &&
+			(symbol_record->type == JAM_PROCEDURE_BLOCK))
+		{
+			/*
+			*	Label is defined - get the address for the jump
+			*/
+			proc_position = symbol_record->position;
+		}
+		else if (status == JAMC_UNDEFINED_SYMBOL)
+		{
+			/*
+			*	Label is not defined... may be a forward reference.
+			*	Search through the file to find the symbol.
+			*/
+			current_position = jam_current_statement_position;
+
+			status = JAMC_SUCCESS;
+
+			while ((!found) && (status == JAMC_SUCCESS))
+			{
+				/*
+				*	Get statements without executing them
+				*/
+				status = jam_get_statement(statement_buffer, label_buffer);
+
+				if ((status == JAMC_SUCCESS) &&
+					(label_buffer[0] != JAMC_NULL_CHAR) &&
+					(jam_version != 2))
+				{
+					/*
+					*	If there is a label, add it to the symbol table
+					*/
+					status = jam_add_symbol(JAM_LABEL, label_buffer, 0L,
+						jam_current_statement_position);
+				}
+
+				/*
+				*	Is this a PROCEDURE or DATA statement?
+				*/
+				if (status == JAMC_SUCCESS)
+				{
+					instruction_code = jam_get_instruction(statement_buffer);
+
+					switch (instruction_code)
+					{
+					case JAM_DATA_INSTR:
+						status = jam_process_data(statement_buffer);
+						break;
+
+					case JAM_PROCEDURE_INSTR:
+						status = jam_process_procedure(statement_buffer);
+
+						/* check if this is the procedure we want to call */
+						if (status == JAMC_SUCCESS)
+						{
+							status = jam_get_symbol_record(procedure_buffer,
+								&symbol_record);
+
+							if (status == JAMC_SUCCESS)
+							{
+								found = TRUE;
+								proc_position = symbol_record->position;
+							}
+							else if (status == JAMC_UNDEFINED_SYMBOL)
+							{
+								/* ignore undefined symbol errors */
+								status = JAMC_SUCCESS;
+							}
+						}
+						break;
+					default:
+						break;
+					}
+				}
+			}
+
+			if (!found)
+			{
+				/* procedure was not found -- report "undefined symbol" */
+				/* rather than "unexpected EOF" */
+				status = JAMC_UNDEFINED_SYMBOL;
+
+				/* seek to location of the ACTION or CALL statement */
+				/* that caused the error */
+				jam_seek(current_position);
+				jam_current_file_position = current_position;
+				jam_current_statement_position = current_position;
+			}
+		}
+
+		if ((status == JAMC_SUCCESS) && (symbol_record->value != 0L))
+		{
+			heap_record = (JAMS_HEAP_RECORD *) symbol_record->value;
+			status = jam_process_uses_list((char *) heap_record->data);
+		}
+
+		/*
+		*	Push a CALL record onto the stack
+		*/
+		if ((status == JAMC_SUCCESS) && (proc_position != (-1L)))
+		{
+			original_stack_position = jam_peek_stack_record();
+			status = jam_push_callret_record(return_position);
+		}
+
+		/*
+		*	Now seek to the desired position so we can execute that
+		*	statement next
+		*/
+		if ((status == JAMC_SUCCESS) && (proc_position != (-1L)))
+		{
+			if (jam_seek(proc_position) == 0)
+			{
+				jam_current_file_position = proc_position;
+			}
+			else
+			{
+				/* seek failed */
+				status = JAMC_IO_ERROR;
+			}
+		}
+	}
+
+	/*
+	*	Set jam_current_block to the procedure about to be executed
+	*/
+	if (status == JAMC_SUCCESS)
+	{
+		jam_current_block = symbol_record;
+		jam_phase = JAM_PROCEDURE_PHASE;
+	}
+
+	/*
+	*	Get program statements and execute them
+	*/
+	while ((!(*done)) && (!endproc) && (status == JAMC_SUCCESS))
+	{
+		if (!reuse_statement_buffer)
+		{
+			status = jam_get_statement
+			(
+				statement_buffer,
+				label_buffer
+			);
+
+			if ((status == JAMC_SUCCESS)
+				&& (label_buffer[0] != JAMC_NULL_CHAR))
+			{
+				status = jam_add_symbol
+				(
+					JAM_LABEL,
+					label_buffer,
+					0L,
+					jam_current_statement_position
+				);
+			}
+		}
+		else
+		{
+			/* statement buffer will be reused -- clear the flag */
+			reuse_statement_buffer = FALSE;
+		}
+
+		if (status == JAMC_SUCCESS)
+		{
+			status = jam_execute_statement
+			(
+				statement_buffer,
+				done,
+				&reuse_statement_buffer,
+				exit_code
+			);
+
+			if ((status == JAMC_SUCCESS) &&
+				(jam_get_instruction(statement_buffer) == JAM_ENDPROC_INSTR) &&
+				(jam_peek_stack_record() == original_stack_position))
+			{
+				endproc = TRUE;
+			}
+		}
+	}
+
+	jam_current_block = tmp_current_block;
+	jam_phase = tmp_phase;
+
+	jam_free_statement_buffer(&statement_buffer, &statement_buffer_size);
+
+	return (status);
+}
+
+JAM_RETURN_TYPE jam_call_procedure_from_action
+(
+	char *procedure_name,
+	BOOL *done,
+	int *exit_code
+)
+{
+	JAM_RETURN_TYPE status = JAMC_SYNTAX_ERROR;
+	int index = 0;
+	int procname_end = 0;
+	int variable_begin = 0;
+	int variable_end = 0;
+	char save_ch = 0;
+	BOOL call_it = FALSE;
+	BOOL init_value_set = FALSE;
+	long init_value = 0L;
+
+	if (jam_isalpha(procedure_name[index]))
+	{
+		while ((jam_is_name_char(procedure_name[index])) &&
+			(index < JAMC_MAX_STATEMENT_LENGTH))
+		{
+			++index;	/* skip over procedure name */
+		}
+
+		procname_end = index;
+		save_ch = procedure_name[procname_end];
+		procedure_name[procname_end] = JAMC_NULL_CHAR;
+
+		if (jam_check_init_list(procedure_name, &init_value))
+		{
+			init_value_set = TRUE;
+		}
+
+		procedure_name[procname_end] = save_ch;
+
+		while ((jam_isspace(procedure_name[index])) &&
+			(index < JAMC_MAX_STATEMENT_LENGTH))
+		{
+			++index;	/* skip over white space */
+		}
+
+		if (procedure_name[index] == JAMC_NULL_CHAR)
+		{
+			/*
+			*	This is a mandatory procedure -- there is no
+			*	OPTIONAL or RECOMMENDED keyword.  Just call it.
+			*/
+			status = JAMC_SUCCESS;
+			call_it = TRUE;
+		}
+		else
+		{
+			variable_begin = index;
+
+			while ((jam_is_name_char(procedure_name[index])) &&
+				(index < JAMC_MAX_STATEMENT_LENGTH))
+			{
+				++index;	/* skip over procedure name */
+			}
+
+			variable_end = index;
+
+			while ((jam_isspace(procedure_name[index])) &&
+				(index < JAMC_MAX_STATEMENT_LENGTH))
+			{
+				++index;	/* skip over white space */
+			}
+
+			if (procedure_name[index] == JAMC_NULL_CHAR)
+			{
+				/* examine the keyword */
+				save_ch = procedure_name[variable_end];
+				procedure_name[variable_end] = JAMC_NULL_CHAR;
+
+				if (jam_stricmp(&procedure_name[variable_begin], "OPTIONAL") == 0)
+				{
+					/* OPTIONAL - don't call it unless specifically requested */
+					status = JAMC_SUCCESS;
+					call_it = FALSE;
+					if (init_value_set && (init_value != 0))
+					{
+						/* it was requested -- call it */
+						call_it = TRUE;
+					}
+				}
+				else if (jam_stricmp(&procedure_name[variable_begin], "RECOMMENDED") == 0)
+				{
+					/* RECOMMENDED - call it unless specifically directed otherwise */
+					status = JAMC_SUCCESS;
+					call_it = TRUE;
+					if (init_value_set && (init_value == 0))
+					{
+						/* it was declined -- don't call it */
+						call_it = FALSE;
+					}
+				}
+				else
+				{
+					/* the string did not match "OPTIONAL" or "RECOMMENDED" */
+					status = JAMC_SYNTAX_ERROR;
+				}
+
+				procedure_name[variable_end] = save_ch;
+			}
+			else
+			{
+				/* something else is lurking here -- syntax error */
+				status = JAMC_SYNTAX_ERROR;
+			}
+		}
+	}
+
+	if ((status == JAMC_SUCCESS) && call_it)
+	{
+		status = jam_call_procedure(procedure_name, done, exit_code);
+	}
+
+	return (status);
+}
+
+JAM_RETURN_TYPE jam_call_procedure_from_procedure
+(
+	char *procedure_name,
+	BOOL *done,
+	int *exit_code
+)
+{
+	JAM_RETURN_TYPE status = JAMC_SCOPE_ERROR;
+	JAMS_HEAP_RECORD *heap_record = NULL;
+	char *uses_list = NULL;
+	char save_ch = 0;
+	int ch_index = 0;
+	int name_begin = 0;
+	int name_end = 0;
+
+	if (jam_version != 2)
+	{
+		status = JAMC_SUCCESS;
+	}
+	else
+	{
+		/*
+		*	Check if procedure being called is listed in the
+		*	"uses list", or is a recursive call to the calling
+		*	procedure itself
+		*/
+		if ((jam_current_block != NULL) &&
+			(jam_current_block->type == JAM_PROCEDURE_BLOCK))
+		{
+			heap_record = (JAMS_HEAP_RECORD *) jam_current_block->value;
+
+			if (heap_record != NULL)
+			{
+				uses_list = (char *) heap_record->data;
+			}
+
+			if (jam_stricmp(procedure_name, jam_current_block->name) == 0)
+			{
+				/* any procedure may always call itself */
+				status = JAMC_SUCCESS;
+			}
+		}
+
+		if ((status != JAMC_SUCCESS) && (uses_list != NULL))
+		{
+			name_begin = 0;
+			ch_index = 0;
+			while ((uses_list[ch_index] != JAMC_NULL_CHAR) &&
+				(status != JAMC_SUCCESS))
+			{
+				name_end = 0;
+				while ((uses_list[ch_index] != JAMC_NULL_CHAR) &&
+					(!jam_is_name_char(uses_list[ch_index])))
+				{
+					++ch_index;
+				}
+				if (jam_is_name_char(uses_list[ch_index]))
+				{
+					name_begin = ch_index;
+				}
+				while ((uses_list[ch_index] != JAMC_NULL_CHAR) &&
+					(jam_is_name_char(uses_list[ch_index])))
+				{
+					++ch_index;
+				}
+				name_end = ch_index;
+
+				if (name_end > name_begin)
+				{
+					save_ch = uses_list[name_end];
+					uses_list[name_end] = JAMC_NULL_CHAR;
+					if (jam_stricmp(&uses_list[name_begin],
+						procedure_name) == 0)
+					{
+						/* symbol is in scope */
+						status = JAMC_SUCCESS;
+					}
+					uses_list[name_end] = save_ch;
+				}
+			}
+		}
+	}
+
+	if (status == JAMC_SUCCESS)
+	{
+		status = jam_call_procedure(procedure_name, done, exit_code);
+	}
+
+	return (status);
+}
+
+/****************************************************************************/
+/*																			*/
+
+JAM_RETURN_TYPE jam_process_action
+(
+	char *statement_buffer,
+	BOOL *done,
+	int *exit_code
+)
+
+/*																			*/
+/*	Description:	Processes an ACTION statement.  Calls specified			*/
+/*					procedure blocks in sequence.							*/
+/*																			*/
+/*	Returns:		JAMC_SUCCESS for success, else appropriate error code	*/
+/*																			*/
+/****************************************************************************/
+{
+	JAM_RETURN_TYPE status = JAMC_SUCCESS;
+	BOOL execute = FALSE;
+	int index = 0;
+	int variable_begin = 0;
+	int variable_end = 0;
+	char save_ch = 0;
+
+	if (jam_version == 0) jam_version = 2;
+
+	if (jam_version == 1) status = JAMC_SYNTAX_ERROR;
+
+	if ((jam_phase == JAM_UNKNOWN_PHASE) || (jam_phase == JAM_NOTE_PHASE))
+	{
+		jam_phase = JAM_ACTION_PHASE;
+	}
+
+	if ((jam_version == 2) && (jam_phase != JAM_ACTION_PHASE))
+	{
+		status = JAMC_PHASE_ERROR;
+	}
+
+	index = jam_skip_instruction_name(statement_buffer);
+
+	if (jam_isalpha(statement_buffer[index]))
+	{
+		/*
+		*	Get the action name
+		*/
+		variable_begin = index;
+		while ((jam_is_name_char(statement_buffer[index])) &&
+			(index < JAMC_MAX_STATEMENT_LENGTH))
+		{
+			++index;	/* skip over variable name */
+		}
+		variable_end = index;
+
+		while ((jam_isspace(statement_buffer[index])) &&
+			(index < JAMC_MAX_STATEMENT_LENGTH))
+		{
+			++index;	/* skip over white space */
+		}
+
+		save_ch = statement_buffer[variable_end];
+		statement_buffer[variable_end] = JAMC_NULL_CHAR;
+		if (jam_action == NULL)
+		{
+			/*
+			*	If no action name was specified, this is a fatal error
+			*/
+			status = JAMC_ACTION_NOT_FOUND;
+		}
+		else if (jam_stricmp(&statement_buffer[variable_begin],
+			jam_action) == 0)
+		{
+			/* this action name matches the desired action name - execute it */
+			execute = TRUE;
+			jam_phase = JAM_PROCEDURE_PHASE;
+		}
+		statement_buffer[variable_end] = save_ch;
+
+		if (execute && (statement_buffer[index] == JAMC_QUOTE_CHAR))
+		{
+			/*
+			*	Get the action description string (if there is one)
+			*/
+			++index;	/* step over quote char */
+			variable_begin = index;
+
+			/* find matching quote */
+			while ((statement_buffer[index] != JAMC_QUOTE_CHAR) &&
+				(statement_buffer[index] != JAMC_NULL_CHAR) &&
+				(index < JAMC_MAX_STATEMENT_LENGTH))
+			{
+				++index;
+			}
+
+			if (statement_buffer[index] == JAMC_QUOTE_CHAR)
+			{
+				variable_end = index;
+
+				++index;	/* skip over quote character */
+
+				while ((jam_isspace(statement_buffer[index])) &&
+					(index < JAMC_MAX_STATEMENT_LENGTH))
+				{
+					++index;	/* skip over white space */
+				}
+			}
+		}
+
+		if (execute && (statement_buffer[index] == JAMC_EQUAL_CHAR))
+		{
+			++index;	/* skip over equal character */
+
+			/*
+			*	Call procedures
+			*/
+			while ((status == JAMC_SUCCESS) &&
+				(statement_buffer[index] != JAMC_NULL_CHAR) &&
+				(statement_buffer[index] != JAMC_SEMICOLON_CHAR) &&
+				(index < JAMC_MAX_STATEMENT_LENGTH))
+			{
+				while ((jam_isspace(statement_buffer[index])) &&
+					(index < JAMC_MAX_STATEMENT_LENGTH))
+				{
+					++index;	/* skip over white space */
+				}
+
+				variable_begin = index;
+
+				while ((statement_buffer[index] != JAMC_NULL_CHAR) &&
+					(statement_buffer[index] != JAMC_COMMA_CHAR) &&
+					(statement_buffer[index] != JAMC_SEMICOLON_CHAR) &&
+					(index < JAMC_MAX_STATEMENT_LENGTH))
+				{
+					++index;
+				}
+
+				if ((statement_buffer[index] == JAMC_COMMA_CHAR) ||
+					(statement_buffer[index] == JAMC_SEMICOLON_CHAR))
+				{
+					variable_end = index;
+
+					save_ch = statement_buffer[variable_end];
+					statement_buffer[variable_end] = JAMC_NULL_CHAR;
+					status = jam_call_procedure_from_action(
+						&statement_buffer[variable_begin], done, exit_code);
+					statement_buffer[variable_end] = save_ch;
+				}
+
+				if (statement_buffer[index] == JAMC_COMMA_CHAR)
+				{
+					++index;	/* step over comma */
+				}
+			}
+
+			if ((status == JAMC_SUCCESS) && !(*done))
+			{
+				*done = TRUE;
+				*exit_code = 0;	/* success */
+			}
+		}
+	}
+
+	return (status);
+}
+
+/****************************************************************************/
+/*																			*/
+
 JAM_RETURN_TYPE jam_process_boolean
 (
 	char *statement_buffer
@@ -937,6 +2777,15 @@ JAM_RETURN_TYPE jam_process_boolean
 	JAMS_SYMBOL_RECORD *symbol_record = NULL;
 	JAMS_HEAP_RECORD *heap_record = NULL;
 	JAM_RETURN_TYPE status = JAMC_SYNTAX_ERROR;
+
+	if (jam_version == 0) jam_version = 1;
+
+	if ((jam_version == 2) &&
+		(jam_phase != JAM_PROCEDURE_PHASE) &&
+		(jam_phase != JAM_DATA_PHASE))
+	{
+		return (JAMC_PHASE_ERROR);
+	}
 
 	index = jam_skip_instruction_name(statement_buffer);
 
@@ -1012,14 +2861,18 @@ JAM_RETURN_TYPE jam_process_boolean
 				/* get a pointer to the symbol record */
 				if (status == JAMC_SUCCESS)
 				{
-					symbol_record = jam_get_symbol_record(
-						&statement_buffer[variable_begin]);
-					if (symbol_record == NULL) status = JAMC_INTERNAL_ERROR;
+					status = jam_get_symbol_record(
+						&statement_buffer[variable_begin], &symbol_record);
 				}
 				statement_buffer[variable_end] = save_ch;
 			}
 
-			if ((status == JAMC_SUCCESS) && (symbol_record != NULL))
+			/*
+			*	Only initialize if array has not been initialized before
+			*/
+			if ((status == JAMC_SUCCESS) &&
+				(symbol_record->type == JAM_BOOLEAN_ARRAY_WRITABLE) &&
+				(symbol_record->value == 0))
 			{
 				if (statement_buffer[index] == JAMC_EQUAL_CHAR)
 				{
@@ -1036,7 +2889,7 @@ JAM_RETURN_TYPE jam_process_boolean
 						symbol_record->value = (long) heap_record;
 
 						/*
-						*	Initialize heap data (or cache buffer) for array
+						*	Initialize heap data for array
 						*/
 						status = jam_read_boolean_array_data(heap_record,
 							&statement_buffer[index + 1]);
@@ -1056,11 +2909,6 @@ JAM_RETURN_TYPE jam_process_boolean
 						symbol_record->value = (long) heap_record;
 					}
 				}
-			}
-			else
-			{
-				/* this should be end of the statement */
-				status = JAMC_SYNTAX_ERROR;
 			}
 		}
 		else
@@ -1135,11 +2983,13 @@ JAM_RETURN_TYPE jam_process_boolean
 JAM_RETURN_TYPE jam_process_call_or_goto
 (
 	char *statement_buffer,
-	BOOL call_statement
+	BOOL call_statement,
+	BOOL *done,
+	int *exit_code
 )
 
 /*																			*/
-/*	Description:	Processes a CALL or GOTO statement.	 If it is a CALL	*/
+/*	Description:	Processes a CALL or GOTO statement.  If it is a CALL	*/
 /*					statement, a stack record is pushed onto the stack.		*/
 /*																			*/
 /*	Returns:		JAMC_SUCCESS for success, else appropriate error code	*/
@@ -1152,19 +3002,32 @@ JAM_RETURN_TYPE jam_process_call_or_goto
 	char save_ch = 0;
 	JAM_RETURN_TYPE status = JAMC_SYNTAX_ERROR;
 	JAMS_SYMBOL_RECORD *symbol_record = NULL;
+	JAME_SYMBOL_TYPE symbol_type = JAM_LABEL;
 	long current_position = 0L;
 	long goto_position = -1L;
 	long return_position = jam_next_statement_position;
 	char label_buffer[JAMC_MAX_NAME_LENGTH + 1];
 	char goto_label[JAMC_MAX_NAME_LENGTH + 1];
-	BOOL done = FALSE;
+	BOOL found = FALSE;
+
+	if (jam_version == 0) jam_version = 1;
+
+	if ((jam_version == 2) && (jam_phase != JAM_PROCEDURE_PHASE))
+	{
+		return (JAMC_PHASE_ERROR);
+	}
+
+	if ((jam_version == 2) && call_statement)
+	{
+		symbol_type = JAM_PROCEDURE_BLOCK;
+	}
 
 	index = jam_skip_instruction_name(statement_buffer);
 
 	/*
 	*	Extract the label name from the statement buffer.
 	*/
-	if (jam_isalpha(statement_buffer[index]))
+	if (jam_isalpha(statement_buffer[index]) && !found)
 	{
 		/* locate label name */
 		label_begin = index;
@@ -1174,6 +3037,11 @@ JAM_RETURN_TYPE jam_process_call_or_goto
 			++index;	/* skip over label name */
 		}
 		label_end = index;
+
+		save_ch = statement_buffer[label_end];
+		statement_buffer[label_end] = JAMC_NULL_CHAR;
+		jam_strcpy(goto_label, &statement_buffer[label_begin]);
+		statement_buffer[label_end] = save_ch;
 
 		while ((jam_isspace(statement_buffer[index])) &&
 			(index < JAMC_MAX_STATEMENT_LENGTH))
@@ -1188,19 +3056,18 @@ JAM_RETURN_TYPE jam_process_call_or_goto
 			*/
 			save_ch = statement_buffer[label_end];
 			statement_buffer[label_end] = JAMC_NULL_CHAR;
-			symbol_record = jam_get_symbol_record(
-				&statement_buffer[label_begin]);
+			status = jam_get_symbol_record(
+				&statement_buffer[label_begin], &symbol_record);
 
-			if ((symbol_record != NULL) &&
-				(symbol_record->type == JAM_LABEL))
+			if ((status == JAMC_SUCCESS) &&
+				(symbol_record->type == symbol_type))
 			{
 				/*
 				*	Label is defined - get the address for the jump
 				*/
 				goto_position = symbol_record->position;
-				status = JAMC_SUCCESS;
 			}
-			else if (symbol_record == NULL)
+			else if (status == JAMC_UNDEFINED_SYMBOL)
 			{
 				/*
 				*	Label is not defined... may be a forward reference.
@@ -1208,11 +3075,9 @@ JAM_RETURN_TYPE jam_process_call_or_goto
 				*/
 				current_position = jam_current_statement_position;
 
-				jam_strcpy(goto_label, &statement_buffer[label_begin]);
-
 				status = JAMC_SUCCESS;
 
-				while ((!done) && (status == JAMC_SUCCESS))
+				while ((!found) && (status == JAMC_SUCCESS))
 				{
 					/*
 					*	Get statements without executing them
@@ -1238,13 +3103,23 @@ JAM_RETURN_TYPE jam_process_call_or_goto
 							*	We found the label we were looking for.
 							*	Get the address for the jump.
 							*/
-							done = TRUE;
+							found = TRUE;
 							goto_position = jam_current_statement_position;
 						}
 					}
+
+					/*
+					*	In Jam 2.0, only search inside current procedure
+					*/
+					if ((status == JAMC_SUCCESS) && (!found) &&
+						(jam_version == 2) && (jam_get_instruction(
+							statement_buffer) == JAM_ENDPROC_INSTR))
+					{
+						status = JAMC_UNDEFINED_SYMBOL;
+					}
 				}
 
-				if (!done)
+				if (!found)
 				{
 					/* label was not found -- report "undefined symbol" */
 					/* rather than "unexpected EOF" */
@@ -1265,7 +3140,7 @@ JAM_RETURN_TYPE jam_process_call_or_goto
 			*	record onto the stack
 			*/
 			if ((call_statement) && (status == JAMC_SUCCESS) &&
-				(goto_position != (-1L)))
+				(goto_position != (-1L)) && (jam_version != 2))
 			{
 				status = jam_push_callret_record(return_position);
 			}
@@ -1274,7 +3149,8 @@ JAM_RETURN_TYPE jam_process_call_or_goto
 			*	Now seek to the desired position so we can execute that
 			*	statement next
 			*/
-			if ((status == JAMC_SUCCESS) && (goto_position != (-1L)))
+			if ((status == JAMC_SUCCESS) && (goto_position != (-1L)) &&
+				((jam_version != 2) || (!call_statement)))
 			{
 				if (jam_seek(goto_position) == 0)
 				{
@@ -1286,6 +3162,95 @@ JAM_RETURN_TYPE jam_process_call_or_goto
 					status = JAMC_IO_ERROR;
 				}
 			}
+
+			/*		
+			*	Call a procedure block in Jam 2.0
+			*/
+			if (call_statement && (jam_version == 2))
+			{
+				status = jam_call_procedure_from_procedure(
+					goto_label, done, exit_code);
+			}
+		}
+	}
+
+	return (status);
+}
+
+JAM_RETURN_TYPE jam_process_data
+(
+	char *statement_buffer
+)
+{
+	int index = 0;
+	int name_begin = 0;
+	int name_end = 0;
+	char save_ch = 0;
+	JAM_RETURN_TYPE status = JAMC_SUCCESS;
+	JAMS_SYMBOL_RECORD *symbol_record = NULL;
+
+	if (jam_version == 0) jam_version = 2;
+
+	if (jam_version == 1) status = JAMC_SYNTAX_ERROR;
+
+	if ((jam_version == 2) &&
+		(jam_phase != JAM_PROCEDURE_PHASE) &&
+		(jam_phase != JAM_DATA_PHASE))
+	{
+		status = JAMC_PHASE_ERROR;
+	}
+
+	if ((jam_version == 2) && (jam_phase == JAM_ACTION_PHASE))
+	{
+		status = JAMC_ACTION_NOT_FOUND;
+	}
+
+	if (status == JAMC_SUCCESS)
+	{
+		index = jam_skip_instruction_name(statement_buffer);
+
+		if (jam_isalpha(statement_buffer[index]))
+		{
+			/*
+			*	Get the data block name
+			*/
+			name_begin = index;
+			while ((jam_is_name_char(statement_buffer[index])) &&
+				(index < JAMC_MAX_STATEMENT_LENGTH))
+			{
+				++index;	/* skip over data block name */
+			}
+			name_end = index;
+
+			save_ch = statement_buffer[name_end];
+			statement_buffer[name_end] = JAMC_NULL_CHAR;
+			status = jam_add_symbol(JAM_DATA_BLOCK,
+				&statement_buffer[name_begin], 0L,
+				jam_current_statement_position);
+
+			/* get a pointer to the symbol record */
+			if (status == JAMC_SUCCESS)
+			{
+				status = jam_get_symbol_record(
+					&statement_buffer[name_begin], &symbol_record);
+			}
+			statement_buffer[name_end] = save_ch;
+
+			while ((jam_isspace(statement_buffer[index])) &&
+				(index < JAMC_MAX_STATEMENT_LENGTH))
+			{
+				++index;	/* skip over white space */
+			}
+		}
+		else
+		{
+			status = JAMC_SYNTAX_ERROR;
+		}
+
+		if ((status == JAMC_SUCCESS) &&
+			(statement_buffer[index] != JAMC_SEMICOLON_CHAR))
+		{
+			status = JAMC_SYNTAX_ERROR;
 		}
 	}
 
@@ -1327,7 +3292,6 @@ JAM_RETURN_TYPE jam_process_drscan_compare
 	long comp_stop_index = 0L;
 	long mask_start_index = 0L;
 	long mask_stop_index = 0L;
-	long space_available = 0L;
 	char save_ch = 0;
 	long *temp_array = NULL;
 	BOOL result = TRUE;
@@ -1498,14 +3462,12 @@ JAM_RETURN_TYPE jam_process_drscan_compare
 	{
 		save_ch = statement_buffer[expr_end];
 		statement_buffer[expr_end] = JAMC_NULL_CHAR;
-		symbol_record = jam_get_symbol_record(&statement_buffer[expr_begin]);
+		status = jam_get_symbol_record(&statement_buffer[expr_begin],
+			&symbol_record);
 		statement_buffer[expr_end] = save_ch;
 
-		if (symbol_record == NULL)
-		{
-			status = JAMC_UNDEFINED_SYMBOL;
-		}
-		else if (symbol_record->type != JAM_BOOLEAN_SYMBOL)
+		if ((status == JAMC_SUCCESS) &&
+			(symbol_record->type != JAM_BOOLEAN_SYMBOL))
 		{
 			status = JAMC_TYPE_MISMATCH;
 		}
@@ -1516,9 +3478,9 @@ JAM_RETURN_TYPE jam_process_drscan_compare
 	*/
 	if (status == JAMC_SUCCESS)
 	{
-		space_available = jam_get_temp_workspace((char **) &temp_array);
+		temp_array = jam_get_temp_workspace((count_value >> 3) + 4);
 
-		if (space_available < (count_value >> 3) + 4)
+		if (temp_array == NULL)
 		{
 			status = JAMC_OUT_OF_MEMORY;
 		}
@@ -1553,6 +3515,8 @@ JAM_RETURN_TYPE jam_process_drscan_compare
 
 		symbol_record->value = result ? 1L : 0L;
 	}
+
+	if (temp_array != NULL) jam_free_temp_workspace(temp_array);
 
 	return (status);
 }
@@ -1694,6 +3658,11 @@ JAM_RETURN_TYPE jam_process_drscan
 	JAMS_SYMBOL_RECORD *symbol_record = NULL;
 	JAMS_HEAP_RECORD *heap_record = NULL;
 	JAM_RETURN_TYPE status = JAMC_SYNTAX_ERROR;
+
+	if ((jam_version == 2) && (jam_phase != JAM_PROCEDURE_PHASE))
+	{
+		return (JAMC_PHASE_ERROR);
+	}
 
 	index = jam_skip_instruction_name(statement_buffer);
 
@@ -1860,6 +3829,11 @@ JAM_RETURN_TYPE jam_process_drstop(char *statement_buffer)
 	JAM_RETURN_TYPE status = JAMC_SUCCESS;
 	JAME_JTAG_STATE state = JAM_ILLEGAL_JTAG_STATE;
 
+	if ((jam_version == 2) && (jam_phase != JAM_PROCEDURE_PHASE))
+	{
+		return (JAMC_PHASE_ERROR);
+	}
+
 	index = jam_skip_instruction_name(statement_buffer);
 
 	/*
@@ -1899,6 +3873,27 @@ JAM_RETURN_TYPE jam_process_drstop(char *statement_buffer)
 	return (status);
 }
 
+JAM_RETURN_TYPE jam_process_enddata
+(
+	char *statement_buffer
+)
+{
+	JAM_RETURN_TYPE status = JAMC_SUCCESS;
+
+	if (jam_version == 0) jam_version = 2;
+
+	if (jam_version == 1) status = JAMC_SYNTAX_ERROR;
+
+	if ((jam_version == 2) && (jam_phase != JAM_PROCEDURE_PHASE))
+	{
+		status = JAMC_PHASE_ERROR;
+	}
+
+	statement_buffer = statement_buffer;
+
+	return (status);
+}
+
 /****************************************************************************/
 /*																			*/
 
@@ -1925,6 +3920,11 @@ JAM_RETURN_TYPE jam_process_exit
 	long exit_code_value = 0L;
 	JAME_EXPRESSION_TYPE expr_type = JAM_ILLEGAL_EXPR_TYPE;
 	JAM_RETURN_TYPE status = JAMC_SYNTAX_ERROR;
+
+	if ((jam_version == 2) && (jam_phase != JAM_PROCEDURE_PHASE))
+	{
+		return (JAMC_PHASE_ERROR);
+	}
 
 	index = jam_skip_instruction_name(statement_buffer);
 
@@ -1967,7 +3967,7 @@ JAM_RETURN_TYPE jam_process_exit
 	*	(from -32767 to 32767) for compatibility with 16-bit systems.
 	*/
 	if ((status == JAMC_SUCCESS) &&
-		((exit_code_value < -32767L)) || (exit_code_value > 32767L))
+		(((exit_code_value < -32767L)) || (exit_code_value > 32767L)))
 	{
 		status = JAMC_INTEGER_OVERFLOW;
 	}
@@ -2008,6 +4008,11 @@ JAM_RETURN_TYPE jam_process_export
 	long value = 0L;
 	JAME_EXPRESSION_TYPE expr_type = JAM_ILLEGAL_EXPR_TYPE;
 	JAM_RETURN_TYPE status = JAMC_SYNTAX_ERROR;
+
+	if ((jam_version == 2) && (jam_phase != JAM_PROCEDURE_PHASE))
+	{
+		return (JAMC_PHASE_ERROR);
+	}
 
 	index = jam_skip_instruction_name(statement_buffer);
 
@@ -2082,7 +4087,7 @@ JAM_RETURN_TYPE jam_process_export
 						*	Export the key and value
 						*/
 						statement_buffer[key_end] = JAMC_NULL_CHAR;
-						jam_export(&statement_buffer[key_begin], value);
+						jam_export_integer(&statement_buffer[key_begin], value);
 					}
 				}
 			}
@@ -2121,6 +4126,11 @@ JAM_RETURN_TYPE jam_process_for
 	JAME_EXPRESSION_TYPE expr_type = JAM_ILLEGAL_EXPR_TYPE;
 	JAM_RETURN_TYPE status = JAMC_SYNTAX_ERROR;
 	JAMS_SYMBOL_RECORD *symbol_record = NULL;
+
+	if ((jam_version == 2) && (jam_phase != JAM_PROCEDURE_PHASE))
+	{
+		return (JAMC_PHASE_ERROR);
+	}
 
 	index = jam_skip_instruction_name(statement_buffer);
 
@@ -2323,11 +4333,16 @@ JAM_RETURN_TYPE jam_process_for
 		status = JAMC_SYNTAX_ERROR;
 		save_ch = statement_buffer[variable_end];
 		statement_buffer[variable_end] = JAMC_NULL_CHAR;
-		symbol_record = jam_get_symbol_record(
-			&statement_buffer[variable_begin]);
+		status = jam_get_symbol_record(&statement_buffer[variable_begin],
+			&symbol_record);
 
-		if ((symbol_record != NULL) &&
-			(symbol_record->type == JAM_INTEGER_SYMBOL))
+		if ((status == JAMC_SUCCESS) &&
+			(symbol_record->type != JAM_INTEGER_SYMBOL))
+		{
+			status = JAMC_TYPE_MISMATCH;
+		}
+
+		if (status == JAMC_SUCCESS)
 		{
 			/*
 			*	Set the variable to the start value
@@ -2347,6 +4362,98 @@ JAM_RETURN_TYPE jam_process_for
 		*/
 		status = jam_push_fornext_record(symbol_record,
 			jam_next_statement_position, stop_value, step_value);
+	}
+
+	return (status);
+}
+
+/****************************************************************************/
+/*																			*/
+
+JAM_RETURN_TYPE jam_process_frequency
+(
+	char *statement_buffer
+)
+
+/*																			*/
+/*	Description:	This function processes a FREQUENCY statement.  If the	*/
+/*					specified frequency (in cycles per second) is less than	*/
+/*					the expected frequency of an ISA parallel port about	*/
+/*					(200 KHz) then delays will be added to each clock cycle.*/
+/*																			*/
+/*	Returns:		JAMC_SUCCESS for success, else appropriate error code	*/
+/*																			*/
+/****************************************************************************/
+{
+	int index = 0;
+	int ret = 0;
+	int expr_begin = 0;
+	int expr_end = 0;
+	long expr_value = 0L;
+	char save_ch = 0;
+	JAME_EXPRESSION_TYPE expr_type = JAM_ILLEGAL_EXPR_TYPE;
+	JAM_RETURN_TYPE status = JAMC_SUCCESS;
+
+	if (jam_version == 0) jam_version = 2;
+
+	if (jam_version != 2) status = JAMC_SYNTAX_ERROR;
+
+	if ((jam_version == 2) && (jam_phase != JAM_PROCEDURE_PHASE))
+	{
+		status = JAMC_PHASE_ERROR;
+	}
+
+	if (status == JAMC_SUCCESS)
+	{
+		index = jam_skip_instruction_name(statement_buffer);
+
+		while (jam_isspace(statement_buffer[index]) &&
+			(index < JAMC_MAX_STATEMENT_LENGTH))
+		{
+			++index;
+		}
+
+		expr_begin = index;
+
+		while ((statement_buffer[index] != JAMC_SEMICOLON_CHAR) &&
+			(index < JAMC_MAX_STATEMENT_LENGTH))
+		{
+			++index;
+		}
+
+		expr_end = index;
+
+		if (statement_buffer[index] == JAMC_SEMICOLON_CHAR)
+		{
+			if (expr_end > expr_begin)
+			{
+				save_ch = statement_buffer[expr_end];
+				statement_buffer[expr_end] = JAMC_NULL_CHAR;
+				status = jam_evaluate_expression(
+					&statement_buffer[expr_begin], &expr_value, &expr_type);
+				statement_buffer[expr_end] = save_ch;
+
+				if (status == JAMC_SUCCESS)
+				{
+					ret = jam_set_frequency(expr_value);
+				}
+			}
+			else
+			{
+				ret = jam_set_frequency(-1L);	/* set default frequency */
+			}
+		}
+		else
+		{
+			/* semicolon not found */
+			status = JAMC_SYNTAX_ERROR;
+		}
+
+		if ((status == JAMC_SUCCESS) && (ret != 0))
+		{
+			/* return code from jam_set_frequency() indicates an error */
+			status = JAMC_BOUNDS_ERROR;
+		}
 	}
 
 	return (status);
@@ -2380,6 +4487,11 @@ JAM_RETURN_TYPE jam_process_if
 	char save_ch = 0;
 	JAM_RETURN_TYPE status = JAMC_SYNTAX_ERROR;
 	JAME_EXPRESSION_TYPE expr_type = JAM_ILLEGAL_EXPR_TYPE;
+
+	if ((jam_version == 2) && (jam_phase != JAM_PROCEDURE_PHASE))
+	{
+		return (JAMC_PHASE_ERROR);
+	}
 
 	index = jam_skip_instruction_name(statement_buffer);
 
@@ -2469,6 +4581,12 @@ JAM_RETURN_TYPE jam_process_integer
 	JAMS_HEAP_RECORD *heap_record = NULL;
 	JAM_RETURN_TYPE status = JAMC_SYNTAX_ERROR;
 
+	if ((jam_version == 2) &&
+		(jam_phase != JAM_PROCEDURE_PHASE) &&
+		(jam_phase != JAM_DATA_PHASE))
+	{
+		return (JAMC_PHASE_ERROR);
+	}
 	index = jam_skip_instruction_name(statement_buffer);
 
 	if (jam_isalpha(statement_buffer[index]))
@@ -2543,14 +4661,15 @@ JAM_RETURN_TYPE jam_process_integer
 				/* get a pointer to the symbol record */
 				if (status == JAMC_SUCCESS)
 				{
-					symbol_record = jam_get_symbol_record(
-						&statement_buffer[variable_begin]);
-					if (symbol_record == NULL) status = JAMC_INTERNAL_ERROR;
+					status = jam_get_symbol_record(
+						&statement_buffer[variable_begin], &symbol_record);
 				}
 				statement_buffer[variable_end] = save_ch;
 			}
 
-			if ((status == JAMC_SUCCESS) && (symbol_record != NULL))
+			if ((status == JAMC_SUCCESS) &&
+				(symbol_record->type == JAM_INTEGER_ARRAY_WRITABLE) &&
+				(symbol_record->value == 0))
 			{
 				if (statement_buffer[index] == JAMC_EQUAL_CHAR)
 				{
@@ -2586,7 +4705,7 @@ JAM_RETURN_TYPE jam_process_integer
 			else
 			{
 				/* this should be end of the statement */
-				status = JAMC_SYNTAX_ERROR;
+				if (status == JAMC_SUCCESS) status = JAMC_SYNTAX_ERROR;
 			}
 		}
 		else
@@ -2657,6 +4776,374 @@ JAM_RETURN_TYPE jam_process_integer
 /****************************************************************************/
 /*																			*/
 
+JAM_RETURN_TYPE jam_process_irscan_compare
+(
+	char *statement_buffer,
+	long count_value,
+	long *in_data,
+	long in_index
+)
+
+/*																			*/
+/*	Description:	Processes the arguments for the COMPARE version of the	*/
+/*					IRSCAN statement.  Calls jam_swap_ir() to access the	*/
+/*					JTAG hardware interface.								*/
+/*																			*/
+/*	Returns:		JAMC_SUCCESS for success, else appropriate error code	*/
+/*																			*/
+/****************************************************************************/
+{
+
+/* syntax: IRSCAN <length> [, <data>] [COMPARE <array>, <mask>, <result>] ; */
+
+	int bit = 0;
+	int index = 0;
+	int expr_begin = 0;
+	int expr_end = 0;
+	int delimiter = 0;
+	int actual = 0;
+	int expected = 0;
+	int mask = 0;
+	long comp_start_index = 0L;
+	long comp_stop_index = 0L;
+	long mask_start_index = 0L;
+	long mask_stop_index = 0L;
+	char save_ch = 0;
+	long *temp_array = NULL;
+	BOOL result = TRUE;
+	JAMS_SYMBOL_RECORD *symbol_record = NULL;
+	JAMS_HEAP_RECORD *heap_record = NULL;
+	long *comp_data = NULL;
+	long *mask_data = NULL;
+	long *literal_array_data = NULL;
+	JAM_RETURN_TYPE status = JAMC_SYNTAX_ERROR;
+
+	/*
+	*	Statement buffer should contain the part of the statement string
+	*	after the COMPARE keyword.
+	*
+	*	The first argument should be the compare array.
+	*/
+	status = jam_find_argument(statement_buffer,
+		&expr_begin, &expr_end, &delimiter);
+
+	if ((status == JAMC_SUCCESS) &&
+		(statement_buffer[delimiter] != JAMC_COMMA_CHAR))
+	{
+		status = JAMC_SYNTAX_ERROR;
+	}
+
+	if (status == JAMC_SUCCESS)
+	{
+		save_ch = statement_buffer[expr_end];
+		statement_buffer[expr_end] = JAMC_NULL_CHAR;
+		status = jam_get_array_argument(&statement_buffer[expr_begin],
+			&symbol_record, &literal_array_data,
+			&comp_start_index, &comp_stop_index, 1);
+		statement_buffer[expr_end] = save_ch;
+		index = delimiter + 1;
+	}
+
+	if ((status == JAMC_SUCCESS) &&
+		(literal_array_data != NULL) &&
+		(comp_start_index == 0) &&
+		(comp_stop_index > count_value - 1))
+	{
+		comp_stop_index = count_value - 1;
+	}
+
+	if ((status == JAMC_SUCCESS) &&
+		(comp_stop_index != comp_start_index + count_value - 1))
+	{
+		status = JAMC_BOUNDS_ERROR;
+	}
+
+	if (status == JAMC_SUCCESS)
+	{
+		if (symbol_record != NULL)
+		{
+			heap_record = (JAMS_HEAP_RECORD *)symbol_record->value;
+
+			if (heap_record != NULL)
+			{
+				comp_data = heap_record->data;
+			}
+			else
+			{
+				status = JAMC_INTERNAL_ERROR;
+			}
+		}
+		else if (literal_array_data != NULL)
+		{
+			comp_data = literal_array_data;
+		}
+		else
+		{
+			status = JAMC_INTERNAL_ERROR;
+		}
+	}
+
+	/*
+	*	Find the next argument -- should be the mask array
+	*/
+	if (status == JAMC_SUCCESS)
+	{
+		status = jam_find_argument(&statement_buffer[index],
+			&expr_begin, &expr_end, &delimiter);
+
+		expr_begin += index;
+		expr_end += index;
+		delimiter += index;
+	}
+
+	if ((status == JAMC_SUCCESS) &&
+		(statement_buffer[delimiter] != JAMC_COMMA_CHAR))
+	{
+		status = JAMC_SYNTAX_ERROR;
+	}
+
+	if (status == JAMC_SUCCESS)
+	{
+		save_ch = statement_buffer[expr_end];
+		statement_buffer[expr_end] = JAMC_NULL_CHAR;
+		status = jam_get_array_argument(&statement_buffer[expr_begin],
+			&symbol_record, &literal_array_data,
+			&mask_start_index, &mask_stop_index, 2);
+		statement_buffer[expr_end] = save_ch;
+		index = delimiter + 1;
+	}
+
+	if ((status == JAMC_SUCCESS) &&
+		(literal_array_data != NULL) &&
+		(mask_start_index == 0) &&
+		(mask_stop_index > count_value - 1))
+	{
+		mask_stop_index = count_value - 1;
+	}
+
+	if ((status == JAMC_SUCCESS) &&
+		(mask_stop_index != mask_start_index + count_value - 1))
+	{
+		status = JAMC_BOUNDS_ERROR;
+	}
+
+	if (status == JAMC_SUCCESS)
+	{
+		if (symbol_record != NULL)
+		{
+			heap_record = (JAMS_HEAP_RECORD *)symbol_record->value;
+
+			if (heap_record != NULL)
+			{
+				mask_data = heap_record->data;
+			}
+			else
+			{
+				status = JAMC_INTERNAL_ERROR;
+			}
+		}
+		else if (literal_array_data != NULL)
+		{
+			mask_data = literal_array_data;
+		}
+		else
+		{
+			status = JAMC_INTERNAL_ERROR;
+		}
+	}
+
+	/*
+	*	Find the third argument -- should be the result variable
+	*/
+	if (status == JAMC_SUCCESS)
+	{
+		status = jam_find_argument(&statement_buffer[index],
+			&expr_begin, &expr_end, &delimiter);
+
+		expr_begin += index;
+		expr_end += index;
+		delimiter += index;
+	}
+
+	if ((status == JAMC_SUCCESS) &&
+		(statement_buffer[delimiter] != JAMC_SEMICOLON_CHAR))
+	{
+		status = JAMC_SYNTAX_ERROR;
+	}
+
+	/*
+	*	Result must be a scalar Boolean variable
+	*/
+	if (status == JAMC_SUCCESS)
+	{
+		save_ch = statement_buffer[expr_end];
+		statement_buffer[expr_end] = JAMC_NULL_CHAR;
+		status = jam_get_symbol_record(&statement_buffer[expr_begin],
+			&symbol_record);
+		statement_buffer[expr_end] = save_ch;
+
+		if ((status == JAMC_SUCCESS) &&
+			(symbol_record->type != JAM_BOOLEAN_SYMBOL))
+		{
+			status = JAMC_TYPE_MISMATCH;
+		}
+	}
+
+	/*
+	*	Find some free memory on the heap
+	*/
+	if (status == JAMC_SUCCESS)
+	{
+		temp_array = jam_get_temp_workspace((count_value >> 3) + 4);
+
+		if (temp_array == NULL)
+		{
+			status = JAMC_OUT_OF_MEMORY;
+		}
+	}
+
+	/*
+	*	Do the JTAG operation, saving the result in temp_array
+	*/
+	if (status == JAMC_SUCCESS)
+	{
+		status = jam_swap_ir(count_value, in_data, in_index, temp_array, 0);
+	}
+
+	/*
+	*	Mask the data and do the comparison
+	*/
+	if (status == JAMC_SUCCESS)
+	{
+		for (bit = 0; (bit < count_value) && result; ++bit)
+		{
+			actual = temp_array[bit >> 5] & (1L << (bit & 0x1f)) ? 1 : 0;
+			expected = comp_data[(bit + comp_start_index) >> 5]
+				& (1L << ((bit + comp_start_index) & 0x1f)) ? 1 : 0;
+			mask = mask_data[(bit + mask_start_index) >> 5]
+				& (1L << ((bit + mask_start_index) & 0x1f)) ? 1 : 0;
+
+			if ((actual & mask) != (expected & mask))
+			{
+				result = FALSE;
+			}
+		}
+
+		symbol_record->value = result ? 1L : 0L;
+	}
+
+	if (temp_array != NULL) jam_free_temp_workspace(temp_array);
+
+	return (status);
+}
+
+/****************************************************************************/
+/*																			*/
+
+JAM_RETURN_TYPE jam_process_irscan_capture
+(
+	char *statement_buffer,
+	long count_value,
+	long *in_data,
+	long in_index
+)
+
+/*																			*/
+/*	Description:	Processes the arguments for the CAPTURE version of the	*/
+/*					IRSCAN statement.  Calls jam_swap_ir() to access the	*/
+/*					JTAG hardware interface.								*/
+/*																			*/
+/*	Returns:		JAMC_SUCCESS for success, else appropriate error code	*/
+/*																			*/
+/****************************************************************************/
+{
+	/* syntax:  IRSCAN <length> [, <data>] [CAPTURE <array>] ; */
+
+	int expr_begin = 0;
+	int expr_end = 0;
+	int delimiter = 0;
+	long start_index = 0L;
+	long stop_index = 0L;
+	char save_ch = 0;
+	long *tdi_data = NULL;
+	long *literal_array_data = NULL;
+	JAMS_SYMBOL_RECORD *symbol_record = NULL;
+	JAMS_HEAP_RECORD *heap_record = NULL;
+	JAM_RETURN_TYPE status = JAMC_SYNTAX_ERROR;
+
+	/*
+	*	Statement buffer should contain the part of the statement string
+	*	after the CAPTURE keyword.
+	*
+	*	The only argument should be the capture array.
+	*/
+	status = jam_find_argument(statement_buffer,
+		&expr_begin, &expr_end, &delimiter);
+
+	if ((status == JAMC_SUCCESS) &&
+		(statement_buffer[delimiter] != JAMC_SEMICOLON_CHAR))
+	{
+		status = JAMC_SYNTAX_ERROR;
+	}
+
+	if (status == JAMC_SUCCESS)
+	{
+		save_ch = statement_buffer[expr_end];
+		statement_buffer[expr_end] = JAMC_NULL_CHAR;
+		status = jam_get_array_argument(&statement_buffer[expr_begin],
+			&symbol_record, &literal_array_data,
+			&start_index, &stop_index, 1);
+		statement_buffer[expr_end] = save_ch;
+	}
+
+	if ((status == JAMC_SUCCESS) && (literal_array_data != NULL))
+	{
+		/* literal array may not be used for capture buffer */
+		status = JAMC_SYNTAX_ERROR;
+	}
+
+	if ((status == JAMC_SUCCESS) &&
+		(stop_index != start_index + count_value - 1))
+	{
+		status = JAMC_BOUNDS_ERROR;
+	}
+
+	if (status == JAMC_SUCCESS)
+	{
+		if (symbol_record != NULL)
+		{
+			heap_record = (JAMS_HEAP_RECORD *)symbol_record->value;
+
+			if (heap_record != NULL)
+			{
+				tdi_data = heap_record->data;
+			}
+			else
+			{
+				status = JAMC_INTERNAL_ERROR;
+			}
+		}
+		else
+		{
+			status = JAMC_INTERNAL_ERROR;
+		}
+	}
+
+	/*
+	*	Perform the JTAG operation, capturing data into the heap buffer
+	*/
+	if (status == JAMC_SUCCESS)
+	{
+		status = jam_swap_ir(count_value, in_data, in_index,
+			tdi_data, start_index);
+	}
+
+	return (status);
+}
+
+/****************************************************************************/
+/*																			*/
+
 JAM_RETURN_TYPE jam_process_irscan
 (
 	char *statement_buffer
@@ -2664,16 +5151,14 @@ JAM_RETURN_TYPE jam_process_irscan
 
 /*																			*/
 /*	Description:	Processes IRSCAN statement, which shifts data through	*/
-/*					an instruction register of the JTAG interface.  The		*/
-/*					syntax for the IRSCAN statement is:						*/
-/*																			*/
-/*					IRSCAN <length>, <data>;								*/
+/*					an instruction register of the JTAG interface			*/
 /*																			*/
 /*	Returns:		JAMC_SUCCESS for success, else appropriate error code	*/
 /*																			*/
 /****************************************************************************/
 {
-	/* syntax:  IRSCAN <length>, <data>; */
+	/* syntax:  IRSCAN <length> [, <data>] [CAPTURE <array>] ; */
+	/* or:  IRSCAN <length> [, <data>] [COMPARE <array>, <mask>, <result>] ; */
 
 	int index = 0;
 	int expr_begin = 0;
@@ -2689,6 +5174,11 @@ JAM_RETURN_TYPE jam_process_irscan
 	JAMS_SYMBOL_RECORD *symbol_record = NULL;
 	JAMS_HEAP_RECORD *heap_record = NULL;
 	JAM_RETURN_TYPE status = JAMC_SYNTAX_ERROR;
+
+	if ((jam_version == 2) && (jam_phase != JAM_PROCEDURE_PHASE))
+	{
+		return (JAMC_PHASE_ERROR);
+	}
 
 	index = jam_skip_instruction_name(statement_buffer);
 
@@ -2790,23 +5280,47 @@ JAM_RETURN_TYPE jam_process_irscan
 	}
 
 	if ((status == JAMC_SUCCESS) &&
-		(stop_index != start_index + count_value - 1))
-	{
-		status = JAMC_BOUNDS_ERROR;
-	}
-
-	if ((status == JAMC_SUCCESS) &&
-		(statement_buffer[delimiter] != JAMC_SEMICOLON_CHAR))
-	{
-		status = JAMC_SYNTAX_ERROR;
-	}
-
-	if (status == JAMC_SUCCESS)
+		(statement_buffer[delimiter] == JAMC_SEMICOLON_CHAR))
 	{
 		/*
-		*	Do the IRSCAN operation
+		*	Do a simple IRSCAN operation -- no capture or compare
 		*/
 		status = jam_do_irscan(count_value, tdi_data, start_index);
+	}
+	else if ((status == JAMC_SUCCESS) &&
+		(statement_buffer[delimiter] == JAMC_COMMA_CHAR))
+	{
+		/*
+		*	Delimiter was a COMMA, so look for CAPTURE or COMPARE keyword
+		*/
+		index = delimiter + 1;
+		while (jam_isspace(statement_buffer[index]))
+		{
+			++index;	/* skip over white space */
+		}
+
+		if ((jam_strncmp(&statement_buffer[index], "CAPTURE", 7) == 0) &&
+			(jam_isspace(statement_buffer[index + 7])))
+		{
+			/*
+			*	Do an IRSCAN with capture
+			*/
+			status = jam_process_irscan_capture(&statement_buffer[index + 8],
+				count_value, tdi_data, start_index);
+		}
+		else if ((jam_strncmp(&statement_buffer[index], "COMPARE", 7) == 0) &&
+			(jam_isspace(statement_buffer[index + 7])))
+		{
+			/*
+			*	Do an IRSCAN with compare
+			*/
+			status = jam_process_irscan_compare(&statement_buffer[index + 8],
+				count_value, tdi_data, start_index);
+		}
+		else
+		{
+			status = JAMC_SYNTAX_ERROR;
+		}
 	}
 
 	return (status);
@@ -2833,6 +5347,11 @@ JAM_RETURN_TYPE jam_process_irstop
 	int delimiter = 0;
 	JAM_RETURN_TYPE status = JAMC_SUCCESS;
 	JAME_JTAG_STATE state = JAM_ILLEGAL_JTAG_STATE;
+
+	if ((jam_version == 2) && (jam_phase != JAM_PROCEDURE_PHASE))
+	{
+		return (JAMC_PHASE_ERROR);
+	}
 
 	index = jam_skip_instruction_name(statement_buffer);
 
@@ -2935,12 +5454,58 @@ JAM_RETURN_TYPE jam_copy_array_subrange
 	return (status);
 }
 
+BOOL jam_check_assignment
+(
+	char *statement_buffer
+)
+{
+	BOOL assignment = FALSE;
+	int index = 0;
+	char save_ch = 0;
+	int variable_begin = 0;
+	int variable_end = 0;
+	JAMS_SYMBOL_RECORD *symbol_record = NULL;
+
+	while ((jam_is_name_char(statement_buffer[index])) &&
+		(index < JAMC_MAX_STATEMENT_LENGTH))
+	{
+		++index;	/* skip over variable name */
+	}
+
+	if (index < JAMC_MAX_NAME_LENGTH)
+	{
+		/* check if this is a variable name */
+		variable_end = index;
+		save_ch = statement_buffer[variable_end];
+		statement_buffer[variable_end] = JAMC_NULL_CHAR;
+
+		if (jam_get_symbol_record(&statement_buffer[variable_begin],
+			&symbol_record) == JAMC_SUCCESS)
+		{
+			if ((symbol_record->type == JAM_INTEGER_SYMBOL) ||
+				(symbol_record->type == JAM_BOOLEAN_SYMBOL) ||
+				(symbol_record->type == JAM_INTEGER_ARRAY_WRITABLE) ||
+				(symbol_record->type == JAM_BOOLEAN_ARRAY_WRITABLE) ||
+				(symbol_record->type == JAM_INTEGER_ARRAY_INITIALIZED) ||
+				(symbol_record->type == JAM_BOOLEAN_ARRAY_INITIALIZED))
+			{
+				assignment = TRUE;
+			}
+		}
+
+		statement_buffer[variable_end] = save_ch;
+	}
+
+	return (assignment);
+}
+
 /****************************************************************************/
 /*																			*/
 
-JAM_RETURN_TYPE jam_process_let
+JAM_RETURN_TYPE jam_process_assignment
 (
-	char *statement_buffer
+	char *statement_buffer,
+	BOOL let
 )
 
 /*																			*/
@@ -2977,7 +5542,24 @@ JAM_RETURN_TYPE jam_process_let
 	JAMS_HEAP_RECORD *heap_record = NULL;
 	JAM_RETURN_TYPE status = JAMC_SYNTAX_ERROR;
 
-	index = jam_skip_instruction_name(statement_buffer);
+	if (let & (jam_version == 0)) jam_version = 1;
+
+	if ((!let) & (jam_version == 0)) jam_version = 2;
+
+	if (((!let) & (jam_version == 1)) || (let & (jam_version == 2)))
+	{
+		return (JAMC_SYNTAX_ERROR);
+	}
+
+	if ((jam_version == 2) && (jam_phase != JAM_PROCEDURE_PHASE))
+	{
+		return (JAMC_PHASE_ERROR);
+	}
+
+	if (let)
+	{
+		index = jam_skip_instruction_name(statement_buffer);
+	}
 
 	if (jam_isalpha(statement_buffer[index]))
 	{
@@ -3042,8 +5624,8 @@ JAM_RETURN_TYPE jam_process_let
 				index = dim_begin;
 				while ((index < dim_end) && !array_subrange)
 				{
-					if ((statement_buffer[index] == '.') &&
-						(statement_buffer[index + 1] == '.'))
+					if ((statement_buffer[index] == JAMC_PERIOD_CHAR) &&
+						(statement_buffer[index + 1] == JAMC_PERIOD_CHAR))
 					{
 						array_subrange = TRUE;
 					}
@@ -3068,16 +5650,12 @@ JAM_RETURN_TYPE jam_process_let
 				/* get pointer to symbol record */
 				save_ch = statement_buffer[variable_end];
 				statement_buffer[variable_end] = JAMC_NULL_CHAR;
-				symbol_record = jam_get_symbol_record(
-					&statement_buffer[variable_begin]);
+				status = jam_get_symbol_record(
+					&statement_buffer[variable_begin], &symbol_record);
 				statement_buffer[variable_end] = save_ch;
 
 				/* check array type */
-				if (symbol_record == NULL)
-				{
-					status = JAMC_UNDEFINED_SYMBOL;
-				}
-				else
+				if (status == JAMC_SUCCESS)
 				{
 					switch (symbol_record->type)
 					{
@@ -3105,8 +5683,7 @@ JAM_RETURN_TYPE jam_process_let
 				{
 					heap_record = (JAMS_HEAP_RECORD *) symbol_record->value;
 
-					if ((heap_record < jam_heap) || (((long)heap_record) >
-						(((long)jam_workspace) + ((long)jam_workspace_size))))
+					if (heap_record == NULL)
 					{
 						status = JAMC_INTERNAL_ERROR;
 					}
@@ -3133,7 +5710,7 @@ JAM_RETURN_TYPE jam_process_let
 						{
 							save_ch = statement_buffer[dim_end];
 							statement_buffer[dim_end] = JAMC_NULL_CHAR;
-							status = jam_get_array_subrange(
+							status = jam_get_array_subrange(symbol_record,
 								&statement_buffer[dim_begin],
 								&dest_subrange_begin, &dest_subrange_end);
 							statement_buffer[dim_end] = save_ch;
@@ -3183,11 +5760,11 @@ JAM_RETURN_TYPE jam_process_let
 			*/
 			save_ch = statement_buffer[variable_end];
 			statement_buffer[variable_end] = JAMC_NULL_CHAR;
-			symbol_record = jam_get_symbol_record(
-				&statement_buffer[variable_begin]);
+			status = jam_get_symbol_record(
+				&statement_buffer[variable_begin], &symbol_record);
 			statement_buffer[variable_end] = save_ch;
 
-			if (symbol_record != NULL)
+			if (status == JAMC_SUCCESS)
 			{
 				switch (symbol_record->type)
 				{
@@ -3203,10 +5780,6 @@ JAM_RETURN_TYPE jam_process_let
 					status = JAMC_TYPE_MISMATCH;
 					break;
 				}
-			}
-			else
-			{
-				status = JAMC_UNDEFINED_SYMBOL;
 			}
 		}
 
@@ -3411,6 +5984,11 @@ JAM_RETURN_TYPE jam_process_next
 	JAMS_STACK_RECORD *stack_record = NULL;
 	JAM_RETURN_TYPE status = JAMC_SYNTAX_ERROR;
 
+	if ((jam_version == 2) && (jam_phase != JAM_PROCEDURE_PHASE))
+	{
+		return (JAMC_PHASE_ERROR);
+	}
+
 	index = jam_skip_instruction_name(statement_buffer);
 
 	if (jam_isalpha(statement_buffer[index]))
@@ -3437,10 +6015,19 @@ JAM_RETURN_TYPE jam_process_next
 			*/
 			save_ch = statement_buffer[variable_end];
 			statement_buffer[variable_end] = JAMC_NULL_CHAR;
-			symbol_record = jam_get_symbol_record(
-				&statement_buffer[variable_begin]);
+			status = jam_get_symbol_record(
+				&statement_buffer[variable_begin], &symbol_record);
 			statement_buffer[variable_end] = save_ch;
 
+			if ((status == JAMC_SUCCESS) &&
+				(symbol_record->type != JAM_INTEGER_SYMBOL))
+			{
+				status = JAMC_TYPE_MISMATCH;
+			}
+		}
+
+		if (status == JAMC_SUCCESS)
+		{
 			/*
 			*	Get stack record at top of stack
 			*/
@@ -3449,12 +6036,7 @@ JAM_RETURN_TYPE jam_process_next
 			/*
 			*	Compare iterator to stack record
 			*/
-			if ((symbol_record == NULL) ||
-				(symbol_record->type != JAM_INTEGER_SYMBOL))
-			{
-				status = JAMC_TYPE_MISMATCH;
-			}
-			else if ((stack_record == NULL) ||
+			if ((stack_record == NULL) ||
 				(stack_record->type != JAM_STACK_FOR_NEXT) ||
 				(stack_record->iterator != symbol_record))
 			{
@@ -3531,6 +6113,14 @@ JAM_RETURN_TYPE jam_process_padding
 	JAME_EXPRESSION_TYPE expr_type = JAM_ILLEGAL_EXPR_TYPE;
 	JAM_RETURN_TYPE status = JAMC_SUCCESS;
 
+	if (jam_version == 0) jam_version = 1;
+
+	if (jam_version == 2)
+	{
+		/* The PADDING statement is not supported in Jam 2.0 */
+		status = JAMC_SYNTAX_ERROR;
+	}
+
 	index = jam_skip_instruction_name(statement_buffer);
 
 	for (argc = 0; (argc < 4) && (status == JAMC_SUCCESS); ++argc)
@@ -3592,11 +6182,22 @@ JAM_RETURN_TYPE jam_process_padding
 	*/
 	if (status == JAMC_SUCCESS)
 	{
-		status = jam_set_jtag_padding(
-			(int) padding[0],	/* dr_preamble  */
-			(int) padding[1],	/* dr_postamble */
-			(int) padding[2],	/* ir_preamble  */
-			(int) padding[3]);	/* ir_postamble */
+		status = jam_set_dr_preamble((int) padding[0], 0, NULL);
+
+		if (status == JAMC_SUCCESS)
+		{
+			status = jam_set_dr_postamble((int) padding[1], 0, NULL);
+		}
+
+		if (status == JAMC_SUCCESS)
+		{
+			status = jam_set_ir_preamble((int) padding[2], 0, NULL);
+		}
+
+		if (status == JAMC_SUCCESS)
+		{
+			status = jam_set_ir_postamble((int) padding[3], 0, NULL);
+		}
 	}
 
 	return (status);
@@ -3639,6 +6240,11 @@ JAM_RETURN_TYPE jam_process_pop
 	JAME_EXPRESSION_TYPE value_type = JAM_ILLEGAL_EXPR_TYPE;
 	JAME_EXPRESSION_TYPE expr_type = JAM_ILLEGAL_EXPR_TYPE;
 	JAM_RETURN_TYPE status = JAMC_SYNTAX_ERROR;
+
+	if ((jam_version == 2) && (jam_phase != JAM_PROCEDURE_PHASE))
+	{
+		return (JAMC_PHASE_ERROR);
+	}
 
 	index = jam_skip_instruction_name(statement_buffer);
 
@@ -3719,16 +6325,12 @@ JAM_RETURN_TYPE jam_process_pop
 				/* get pointer to symbol record */
 				save_ch = statement_buffer[variable_end];
 				statement_buffer[variable_end] = JAMC_NULL_CHAR;
-				symbol_record = jam_get_symbol_record(
-					&statement_buffer[variable_begin]);
+				status = jam_get_symbol_record(
+					&statement_buffer[variable_begin], &symbol_record);
 				statement_buffer[variable_end] = save_ch;
 
 				/* check array type */
-				if (symbol_record == NULL)
-				{
-					status = JAMC_UNDEFINED_SYMBOL;
-				}
-				else
+				if (status == JAMC_SUCCESS)
 				{
 					switch (symbol_record->type)
 					{
@@ -3756,8 +6358,7 @@ JAM_RETURN_TYPE jam_process_pop
 				{
 					heap_record = (JAMS_HEAP_RECORD *) symbol_record->value;
 
-					if ((heap_record < jam_heap) || (((long)heap_record) >
-						(((long)jam_workspace) + ((long)jam_workspace_size))))
+					if (heap_record == NULL)
 					{
 						status = JAMC_INTERNAL_ERROR;
 					}
@@ -3775,18 +6376,16 @@ JAM_RETURN_TYPE jam_process_pop
 			*/
 			if (statement_buffer[index] == JAMC_SEMICOLON_CHAR)
 			{
-				status = JAMC_SUCCESS;
-
 				/*
 				*	Get variable type
 				*/
 				save_ch = statement_buffer[variable_end];
 				statement_buffer[variable_end] = JAMC_NULL_CHAR;
-				symbol_record = jam_get_symbol_record(
-					&statement_buffer[variable_begin]);
+				status = jam_get_symbol_record(
+					&statement_buffer[variable_begin], &symbol_record);
 				statement_buffer[variable_end] = save_ch;
 
-				if (symbol_record != NULL)
+				if (status == JAMC_SUCCESS)
 				{
 					switch (symbol_record->type)
 					{
@@ -3802,10 +6401,6 @@ JAM_RETURN_TYPE jam_process_pop
 						status = JAMC_TYPE_MISMATCH;
 						break;
 					}
-				}
-				else
-				{
-					status = JAMC_UNDEFINED_SYMBOL;
 				}
 			}
 			else
@@ -3902,6 +6497,200 @@ JAM_RETURN_TYPE jam_process_pop
 /****************************************************************************/
 /*																			*/
 
+JAM_RETURN_TYPE jam_process_pre_post
+(
+	JAME_INSTRUCTION instruction_code,
+	char *statement_buffer
+)
+
+/*																			*/
+/*	Description:	Processes the PREDR, PREIR, POSTDR, and POSTIR			*/
+/*					statements.  These statements together replace the		*/
+/*					PADDING statement from the JAM 1.0 language spec.		*/
+/*																			*/
+/*	Returns:		JAMC_SUCCESS for success, else appropriate error code	*/
+/*																			*/
+/****************************************************************************/
+{
+	int index = 0;
+	int expr_begin = 0;
+	int expr_end = 0;
+	int delimiter = 0;
+	char save_ch = 0;
+	long count = 0L;
+	long start_index = 0L;
+	long stop_index = 0L;
+	long *literal_array_data = NULL;
+	long *padding_data = NULL;
+	JAMS_SYMBOL_RECORD *symbol_record = NULL;
+	JAMS_HEAP_RECORD *heap_record = NULL;
+	JAME_EXPRESSION_TYPE expr_type = JAM_ILLEGAL_EXPR_TYPE;
+	JAM_RETURN_TYPE status = JAMC_SUCCESS;
+
+	if ((jam_version == 2) && (jam_phase != JAM_PROCEDURE_PHASE))
+	{
+		return (JAMC_PHASE_ERROR);
+	}
+
+	index = jam_skip_instruction_name(statement_buffer);
+
+	/*
+	*	First, get the count value
+	*/
+	status = jam_find_argument(&statement_buffer[index],
+		&expr_begin, &expr_end, &delimiter);
+
+	expr_begin += index;
+	expr_end += index;
+	delimiter += index;
+
+	if (status == JAMC_SUCCESS)
+	{
+		save_ch = statement_buffer[expr_end];
+		statement_buffer[expr_end] = JAMC_NULL_CHAR;
+		status = jam_evaluate_expression(
+			&statement_buffer[expr_begin], &count, &expr_type);
+		statement_buffer[expr_end] = save_ch;
+
+		/*
+		*	Check for integer expression
+		*/
+		if ((status == JAMC_SUCCESS) &&
+			(expr_type != JAM_INTEGER_EXPR) &&
+			(expr_type != JAM_INT_OR_BOOL_EXPR))
+		{
+			status = JAMC_TYPE_MISMATCH;
+		}
+
+		/*
+		*	Check the range -- count value must be between 0 and 1000
+		*/
+		if ((status == JAMC_SUCCESS) &&
+			((count < 0L) || (count > 1000L)))
+		{
+			status = JAMC_SYNTAX_ERROR;
+		}
+	}
+
+	/*
+	*	Second, get the optional padding data pattern (Boolean array)
+	*/
+	if (status == JAMC_SUCCESS)
+	{
+		if (statement_buffer[delimiter] == JAMC_COMMA_CHAR)
+		{
+			expr_begin = delimiter + 1;
+			expr_end = expr_begin;
+			while ((jam_isspace(statement_buffer[expr_begin])) &&
+				(expr_begin < JAMC_MAX_STATEMENT_LENGTH))
+			{
+				++expr_begin;	/* skip over white space */
+			}
+			while ((statement_buffer[expr_end] != JAMC_NULL_CHAR) &&
+				(expr_end < JAMC_MAX_STATEMENT_LENGTH))
+			{
+				++expr_end;
+			}
+			while ((statement_buffer[expr_end] != JAMC_SEMICOLON_CHAR) &&
+				(expr_end > 0))
+			{
+				--expr_end;
+			}
+
+			if (expr_end > expr_begin)
+			{
+				save_ch = statement_buffer[expr_end];
+				statement_buffer[expr_end] = JAMC_NULL_CHAR;
+				status = jam_get_array_argument(
+					&statement_buffer[expr_begin],
+					&symbol_record,
+					&literal_array_data,
+					&start_index,
+					&stop_index,
+					0);
+				statement_buffer[expr_end] = save_ch;
+
+				if ((status == JAMC_SUCCESS) &&
+					(stop_index < (start_index + count - 1)))
+				{
+					status = JAMC_BOUNDS_ERROR;
+				}
+
+				if (status == JAMC_SUCCESS)
+				{
+					if (symbol_record != NULL)
+					{
+						heap_record = (JAMS_HEAP_RECORD *)symbol_record->value;
+
+						if (heap_record != NULL)
+						{
+							padding_data = heap_record->data;
+						}
+						else
+						{
+							status = JAMC_INTERNAL_ERROR;
+						}
+					}
+					else if (literal_array_data != NULL)
+					{
+						padding_data = literal_array_data;
+					}
+					else
+					{
+						status = JAMC_INTERNAL_ERROR;
+					}
+				}
+			}
+			else
+			{
+				status = JAMC_SYNTAX_ERROR;
+			}
+		}
+		else if (statement_buffer[delimiter] != JAMC_SEMICOLON_CHAR)
+		{
+			status = JAMC_SYNTAX_ERROR;
+		}
+	}
+
+	/*
+	*	Store the new padding value
+	*/
+	if (status == JAMC_SUCCESS)
+	{
+		switch (instruction_code)
+		{
+		case JAM_POSTDR_INSTR:
+			status = jam_set_dr_postamble((int) count, (int) start_index,
+				padding_data);
+			break;
+
+		case JAM_POSTIR_INSTR:
+			status = jam_set_ir_postamble((int) count, (int) start_index,
+				padding_data);
+			break;
+
+		case JAM_PREDR_INSTR:
+			status = jam_set_dr_preamble((int) count, (int) start_index,
+				padding_data);
+			break;
+
+		case JAM_PREIR_INSTR:
+			status = jam_set_ir_preamble((int) count, (int) start_index,
+				padding_data);
+			break;
+
+		default:
+			status = JAMC_INTERNAL_ERROR;
+			break;
+		}
+	}
+
+	return (status);
+}
+
+/****************************************************************************/
+/*																			*/
+
 JAM_RETURN_TYPE jam_process_print
 (
 	char *statement_buffer
@@ -3918,17 +6707,31 @@ JAM_RETURN_TYPE jam_process_print
 {
 	int index = 0;
 	int dest_index = 0;
-	char text_buffer[JAMC_MAX_STATEMENT_LENGTH + 1];
+	char *text_buffer = NULL;
 	int expr_begin = 0;
 	int expr_end = 0;
 	char save_ch = 0;
 	long expr_value = 0L;
 	JAM_RETURN_TYPE status = JAMC_SUCCESS;
 
-	index = jam_skip_instruction_name(statement_buffer);
+	if ((jam_version == 2) && (jam_phase != JAM_PROCEDURE_PHASE))
+	{
+		return (JAMC_PHASE_ERROR);
+	}
 
-	while ((statement_buffer[index] != JAMC_SEMICOLON_CHAR) &&
-		(status == JAMC_SUCCESS) &&
+	text_buffer = jam_malloc(JAMC_MAX_STATEMENT_LENGTH + 1024);
+
+	if (text_buffer == NULL)
+	{
+		status = JAMC_OUT_OF_MEMORY;
+	}
+	else
+	{
+		index = jam_skip_instruction_name(statement_buffer);
+	}
+
+	while ((status == JAMC_SUCCESS) &&
+		(statement_buffer[index] != JAMC_SEMICOLON_CHAR) &&
 		(index < JAMC_MAX_STATEMENT_LENGTH))
 	{
 		/*
@@ -3962,7 +6765,7 @@ JAM_RETURN_TYPE jam_process_print
 		else if ((statement_buffer[index] == 'C') &&
 			(statement_buffer[index + 1] == 'H') &&
 			(statement_buffer[index + 2] == 'R') &&
-			(statement_buffer[index + 3] == '$') &&
+			(statement_buffer[index + 3] == JAMC_DOLLAR_CHAR) &&
 			(statement_buffer[index + 4] == JAMC_LPAREN_CHAR))
 		{
 			/*
@@ -4111,6 +6914,148 @@ JAM_RETURN_TYPE jam_process_print
 		jam_message(text_buffer);
 	}
 
+	if (text_buffer != NULL) jam_free(text_buffer);
+
+	return (status);
+}
+
+/****************************************************************************/
+/*																			*/
+
+JAM_RETURN_TYPE jam_process_procedure
+(
+	char *statement_buffer
+)
+
+/*																			*/
+/*	Description:	Initializes a procedure block.  This function does not	*/
+/*					actually execute the procedure, it merely adds it to	*/
+/*					the symbol table so it may be executed later.			*/
+/*																			*/
+/*	Returns:		JAMC_SUCCESS for success, else appropriate error code	*/
+/*																			*/
+/****************************************************************************/
+{
+	int index = 0;
+	int procname_begin = 0;
+	int procname_end = 0;
+	char save_ch = 0;
+	JAM_RETURN_TYPE status = JAMC_SUCCESS;
+	JAMS_SYMBOL_RECORD *symbol_record = NULL;
+	JAMS_HEAP_RECORD *heap_record = NULL;
+
+	if (jam_version == 0) jam_version = 2;
+
+	if (jam_version == 1) status = JAMC_SYNTAX_ERROR;
+
+	if ((jam_version == 2) && (jam_phase != JAM_PROCEDURE_PHASE))
+	{
+		status = JAMC_PHASE_ERROR;
+	}
+
+	if ((jam_version == 2) && (jam_phase == JAM_ACTION_PHASE))
+	{
+		status = JAMC_ACTION_NOT_FOUND;
+	}
+
+	if (status == JAMC_SUCCESS)
+	{
+		index = jam_skip_instruction_name(statement_buffer);
+
+		if (jam_isalpha(statement_buffer[index]))
+		{
+			/*
+			*	Get the procedure name
+			*/
+			procname_begin = index;
+			while ((jam_is_name_char(statement_buffer[index])) &&
+				(index < JAMC_MAX_STATEMENT_LENGTH))
+			{
+				++index;	/* skip over procedure name */
+			}
+			procname_end = index;
+
+			save_ch = statement_buffer[procname_end];
+			statement_buffer[procname_end] = JAMC_NULL_CHAR;
+			status = jam_add_symbol(JAM_PROCEDURE_BLOCK,
+				&statement_buffer[procname_begin], 0L,
+				jam_current_statement_position);
+			/* get a pointer to the symbol record */
+			if (status == JAMC_SUCCESS)
+			{
+				status = jam_get_symbol_record(
+					&statement_buffer[procname_begin], &symbol_record);
+			}
+			statement_buffer[procname_end] = save_ch;
+
+			while ((jam_isspace(statement_buffer[index])) &&
+				(index < JAMC_MAX_STATEMENT_LENGTH))
+			{
+				++index;	/* skip over white space */
+			}
+		}
+		else
+		{
+			status = JAMC_SYNTAX_ERROR;
+		}
+	}
+
+	if (status == JAMC_SUCCESS)
+	{
+		/*
+		*	Get list of USES blocks
+		*/
+		if (statement_buffer[index] != JAMC_SEMICOLON_CHAR)
+		{
+			if ((jam_strncmp(&statement_buffer[index], "USES", 4) == 0) &&
+				(jam_isspace(statement_buffer[index + 4])))
+			{
+				/*
+				*	Get list of USES blocks
+				*/
+				index += 4;	/* skip over USES keyword */
+
+				while ((jam_isspace(statement_buffer[index])) &&
+					(index < JAMC_MAX_STATEMENT_LENGTH))
+				{
+					++index;	/* skip over white space */
+				}
+
+				if (symbol_record->value == 0)
+				{
+					status = jam_add_heap_record(symbol_record, &heap_record,
+						jam_strlen(&statement_buffer[index]) + 1);
+
+					if (status == JAMC_SUCCESS)
+					{
+						symbol_record->value = (long) heap_record;
+						jam_strcpy((char *) heap_record->data,
+							&statement_buffer[index]);
+					}
+				}
+				else
+				{
+					heap_record = (JAMS_HEAP_RECORD *) symbol_record->value;
+				}
+
+				/*
+				*	Ignore the USES clause -- it will be processed later
+				*/
+				while ((statement_buffer[index] != JAMC_SEMICOLON_CHAR) &&
+					(statement_buffer[index] != JAMC_NULL_CHAR) &&
+					(index < JAMC_MAX_STATEMENT_LENGTH))
+				{
+					++index;
+				}
+			}
+			else
+			{
+				/* error: expected USES keyword */
+				status = JAMC_SYNTAX_ERROR;
+			}
+		}
+	}
+
 	return (status);
 }
 
@@ -4123,7 +7068,7 @@ JAM_RETURN_TYPE jam_process_push
 )
 
 /*																			*/
-/*	Description:	Pushed an integer or Boolean value onto the stack		*/
+/*	Description:	Pushes an integer or Boolean value onto the stack		*/
 /*																			*/
 /*	Returns:		JAMC_SUCCESS for success, else appropriate error code	*/
 /*																			*/
@@ -4135,6 +7080,11 @@ JAM_RETURN_TYPE jam_process_push
 	char save_ch = 0;
 	long push_value = 0L;
 	JAM_RETURN_TYPE status = JAMC_SYNTAX_ERROR;
+
+	if ((jam_version == 2) && (jam_phase != JAM_PROCEDURE_PHASE))
+	{
+		return (JAMC_PHASE_ERROR);
+	}
 
 	index = jam_skip_instruction_name(statement_buffer);
 
@@ -4178,7 +7128,8 @@ JAM_RETURN_TYPE jam_process_push
 
 JAM_RETURN_TYPE jam_process_return
 (
-	char *statement_buffer
+	char *statement_buffer,
+	BOOL endproc
 )
 
 /*																			*/
@@ -4193,6 +7144,16 @@ JAM_RETURN_TYPE jam_process_return
 	long return_position = 0L;
 	JAM_RETURN_TYPE status = JAMC_SYNTAX_ERROR;
 	JAMS_STACK_RECORD *stack_record = NULL;
+
+	if ((jam_version == 0) && endproc) jam_version = 2;
+
+	if ((jam_version == 0) && !endproc) jam_version = 1;
+
+	if ((jam_version == 2) && !endproc)
+	{
+		/* Jam 2.0 does not support the RETURN statement */
+		return (JAMC_SYNTAX_ERROR);
+	}
 
 	index = jam_skip_instruction_name(statement_buffer);
 
@@ -4246,6 +7207,79 @@ JAM_RETURN_TYPE jam_process_return
 /****************************************************************************/
 /*																			*/
 
+JAM_RETURN_TYPE jam_find_state_argument
+(
+	char *statement_buffer,
+	int *begin,
+	int *end,
+	int *delimiter
+)
+
+/*																			*/
+/*	Description:	Special version of jam_find_argument() for state paths. */
+/*					Valid delimiters are whitespace, COMMA, or SEMICOLON.   */
+/*					Returns indices of begin and end of argument, and the   */
+/*					delimiter after	the argument.							*/
+/*																			*/
+/*	Returns:		JAMC_SUCCESS for success, else appropriate error code	*/
+/*																			*/
+/****************************************************************************/
+{
+	int index = 0;
+	JAM_RETURN_TYPE status = JAMC_SUCCESS;
+
+	while ((jam_isspace(statement_buffer[index])) &&
+		(index < JAMC_MAX_STATEMENT_LENGTH))
+	{
+		++index;	/* skip over white space */
+	}
+
+	*begin = index;
+
+	/* loop until white space or comma or semicolon */
+	while ((!jam_isspace(statement_buffer[index])) &&
+		(statement_buffer[index] != JAMC_NULL_CHAR) &&
+		(statement_buffer[index] != JAMC_COMMA_CHAR) &&
+		(statement_buffer[index] != JAMC_SEMICOLON_CHAR) &&
+		(index < JAMC_MAX_STATEMENT_LENGTH))
+	{
+		++index;
+	}
+
+	if ((!jam_isspace(statement_buffer[index])) &&
+		(statement_buffer[index] != JAMC_COMMA_CHAR) &&
+		(statement_buffer[index] != JAMC_SEMICOLON_CHAR))
+	{
+		status = JAMC_SYNTAX_ERROR;
+	}
+	else
+	{
+		*end = index;	/* end is position after last argument character */
+
+		*delimiter = index;	/* delimiter is position of comma or semicolon */
+
+		/* check whether a comma or semicolon comes after the white space */
+		while ((jam_isspace(statement_buffer[index])) &&
+			(statement_buffer[index] != JAMC_NULL_CHAR) &&
+			(index < JAMC_MAX_STATEMENT_LENGTH))
+		{
+			++index;
+		}
+
+		if ((statement_buffer[index] == JAMC_COMMA_CHAR) ||
+			(statement_buffer[index] == JAMC_SEMICOLON_CHAR))
+		{
+			*delimiter = index;	/* send the real delimiter */
+		}
+
+	}
+
+	return (status);
+}
+
+/****************************************************************************/
+/*																			*/
+
 JAM_RETURN_TYPE jam_process_state
 (
 	char *statement_buffer
@@ -4267,6 +7301,11 @@ JAM_RETURN_TYPE jam_process_state
 	JAM_RETURN_TYPE status = JAMC_SUCCESS;
 	JAME_JTAG_STATE state = JAM_ILLEGAL_JTAG_STATE;
 
+	if ((jam_version == 2) && (jam_phase != JAM_PROCEDURE_PHASE))
+	{
+		return (JAMC_PHASE_ERROR);
+	}
+
 	index = jam_skip_instruction_name(statement_buffer);
 
 	do
@@ -4274,7 +7313,7 @@ JAM_RETURN_TYPE jam_process_state
 		/*
 		*	Get next argument
 		*/
-		status = jam_find_argument(&statement_buffer[index],
+		status = jam_find_state_argument(&statement_buffer[index],
 			&expr_begin, &expr_end, &delimiter);
 
 		if (status == JAMC_SUCCESS)
@@ -4304,13 +7343,430 @@ JAM_RETURN_TYPE jam_process_state
 		}
 	}
 	while ((status == JAMC_SUCCESS) &&
-		(statement_buffer[delimiter] == JAMC_COMMA_CHAR));
+		((jam_isspace(statement_buffer[delimiter])) ||
+		(statement_buffer[delimiter] == JAMC_COMMA_CHAR)));
 
 	if ((status == JAMC_SUCCESS) &&
 		(statement_buffer[delimiter] != JAMC_SEMICOLON_CHAR))
 	{
 		status = JAMC_SYNTAX_ERROR;
 	}
+
+	return (status);
+}
+
+/****************************************************************************/
+/*																			*/
+
+JAM_RETURN_TYPE jam_process_trst
+(
+	char *statement_buffer
+)
+
+/*																			*/
+/*	Description:	Asserts the TRST signal to the JTAG hardware interface.	*/
+/*					NOTE: this does not guarantee a chain reset, because	*/
+/*					some devices in the chain may not use the TRST signal.	*/
+/*																			*/
+/*					TRST <integer-expr> CYCLES;		-or-					*/
+/*					TRST <integer-expr> USEC;		-or-					*/
+/*					TRST <integer-expr> CYCLES, <integer-expr> USEC;		*/
+/*																			*/
+/*	Returns:		JAMC_SUCCESS for success, else appropriate error code	*/
+/*																			*/
+/****************************************************************************/
+{
+	JAM_RETURN_TYPE status = JAMC_SUCCESS;
+
+	if (jam_version == 0) jam_version = 2;
+
+	if (jam_version == 1) status = JAMC_SYNTAX_ERROR;
+
+	if ((jam_version == 2) && (jam_phase != JAM_PROCEDURE_PHASE))
+	{
+		status = JAMC_PHASE_ERROR;
+	}
+
+	/* assert TRST...  NOT IMPLEMENTED YET! */
+
+	status = jam_process_wait(statement_buffer);
+
+	/* release TRST...  NOT IMPLEMENTED YET! */
+
+	return (status);
+}
+
+/****************************************************************************/
+/*																			*/
+
+JAM_RETURN_TYPE jam_process_vector_capture
+(
+	char *statement_buffer,
+	int signal_count,
+	long *dir_vector,
+	long *data_vector
+)
+
+/*																			*/
+/*	Description:	Applies signals to non-JTAG hardware interface, reads	*/
+/*					back signals from hardware, and stores values in the	*/
+/*					capture array.  The syntax for the entire statement is:	*/
+/*																			*/
+/*					VECTOR <dir>, <data>, CAPTURE <capture> ;				*/
+/*																			*/
+/*	Returns:		JAMC_SUCCESS for success, else appropriate error code	*/
+/*																			*/
+/****************************************************************************/
+{
+	int expr_begin = 0;
+	int expr_end = 0;
+	int delimiter = 0;
+	long start_index = 0L;
+	long stop_index = 0L;
+	char save_ch = 0;
+	long *capture_buffer = NULL;
+	long *literal_array_data = NULL;
+	JAMS_SYMBOL_RECORD *symbol_record = NULL;
+	JAMS_HEAP_RECORD *heap_record = NULL;
+	JAM_RETURN_TYPE status = JAMC_SYNTAX_ERROR;
+
+	/*
+	*	Statement buffer should contain the part of the statement string
+	*	after the CAPTURE keyword.
+	*
+	*	The only argument should be the capture array.
+	*/
+	status = jam_find_argument(statement_buffer,
+		&expr_begin, &expr_end, &delimiter);
+
+	if ((status == JAMC_SUCCESS) &&
+		(statement_buffer[delimiter] != JAMC_SEMICOLON_CHAR))
+	{
+		status = JAMC_SYNTAX_ERROR;
+	}
+
+	if (status == JAMC_SUCCESS)
+	{
+		save_ch = statement_buffer[expr_end];
+		statement_buffer[expr_end] = JAMC_NULL_CHAR;
+		status = jam_get_array_argument(&statement_buffer[expr_begin],
+			&symbol_record, &literal_array_data,
+			&start_index, &stop_index, 2);
+		statement_buffer[expr_end] = save_ch;
+	}
+
+	if ((status == JAMC_SUCCESS) && (literal_array_data != NULL))
+	{
+		/* literal array may not be used for capture buffer */
+		status = JAMC_SYNTAX_ERROR;
+	}
+
+	if ((status == JAMC_SUCCESS) &&
+		(stop_index != start_index + signal_count - 1))
+	{
+		status = JAMC_BOUNDS_ERROR;
+	}
+
+	if (status == JAMC_SUCCESS)
+	{
+		if (symbol_record != NULL)
+		{
+			heap_record = (JAMS_HEAP_RECORD *)symbol_record->value;
+
+			if (heap_record != NULL)
+			{
+				capture_buffer = heap_record->data;
+			}
+			else
+			{
+				status = JAMC_INTERNAL_ERROR;
+			}
+		}
+		else
+		{
+			status = JAMC_INTERNAL_ERROR;
+		}
+	}
+
+	/*
+	*	Perform the VECTOR operation, capturing data into the heap buffer
+	*/
+	if (status == JAMC_SUCCESS)
+	{
+		if (jam_vector_io(signal_count, dir_vector, data_vector,
+			capture_buffer) != signal_count)
+		{
+			status = JAMC_INTERNAL_ERROR;
+		}
+	}
+
+	return (status);
+}
+
+/****************************************************************************/
+/*																			*/
+
+JAM_RETURN_TYPE jam_process_vector_compare
+(
+	char *statement_buffer,
+	int signal_count,
+	long *dir_vector,
+	long *data_vector
+)
+
+/*																			*/
+/*	Description:	Applies signals to non-JTAG hardware interface, reads	*/
+/*					back signals from hardware, and compares values to the	*/
+/*					expected values.  Result is stored in a BOOLEAN			*/
+/*					variable.  The syntax for the entire statement is:		*/
+/*																			*/
+/*			VECTOR <dir>, <data>, COMPARE <expected>, <mask>, <result> ;	*/
+/*																			*/
+/*	Returns:		JAMC_SUCCESS for success, else appropriate error code	*/
+/*																			*/
+/****************************************************************************/
+{
+	int bit = 0;
+	int index = 0;
+	int expr_begin = 0;
+	int expr_end = 0;
+	int delimiter = 0;
+	int actual = 0;
+	int expected = 0;
+	int mask = 0;
+	long comp_start_index = 0L;
+	long comp_stop_index = 0L;
+	long mask_start_index = 0L;
+	long mask_stop_index = 0L;
+	char save_ch = 0;
+	long *temp_array = NULL;
+	BOOL result = TRUE;
+	JAMS_SYMBOL_RECORD *symbol_record = NULL;
+	JAMS_HEAP_RECORD *heap_record = NULL;
+	long *comp_data = NULL;
+	long *mask_data = NULL;
+	long *literal_array_data = NULL;
+	JAM_RETURN_TYPE status = JAMC_SYNTAX_ERROR;
+
+	/*
+	*	Statement buffer should contain the part of the statement string
+	*	after the COMPARE keyword.
+	*
+	*	The first argument should be the compare array.
+	*/
+	status = jam_find_argument(statement_buffer,
+		&expr_begin, &expr_end, &delimiter);
+
+	if ((status == JAMC_SUCCESS) &&
+		(statement_buffer[delimiter] != JAMC_COMMA_CHAR))
+	{
+		status = JAMC_SYNTAX_ERROR;
+	}
+
+	if (status == JAMC_SUCCESS)
+	{
+		save_ch = statement_buffer[expr_end];
+		statement_buffer[expr_end] = JAMC_NULL_CHAR;
+		status = jam_get_array_argument(&statement_buffer[expr_begin],
+			&symbol_record, &literal_array_data,
+			&comp_start_index, &comp_stop_index, 2);
+		statement_buffer[expr_end] = save_ch;
+		index = delimiter + 1;
+	}
+
+	if ((status == JAMC_SUCCESS) &&
+		(literal_array_data != NULL) &&
+		(comp_start_index == 0) &&
+		(comp_stop_index > signal_count - 1))
+	{
+		comp_stop_index = signal_count - 1;
+	}
+
+	if ((status == JAMC_SUCCESS) &&
+		(comp_stop_index != comp_start_index + signal_count - 1))
+	{
+		status = JAMC_BOUNDS_ERROR;
+	}
+
+	if (status == JAMC_SUCCESS)
+	{
+		if (symbol_record != NULL)
+		{
+			heap_record = (JAMS_HEAP_RECORD *)symbol_record->value;
+
+			if (heap_record != NULL)
+			{
+				comp_data = heap_record->data;
+			}
+			else
+			{
+				status = JAMC_INTERNAL_ERROR;
+			}
+		}
+		else if (literal_array_data != NULL)
+		{
+			comp_data = literal_array_data;
+		}
+		else
+		{
+			status = JAMC_INTERNAL_ERROR;
+		}
+	}
+
+	/*
+	*	Find the next argument -- should be the mask array
+	*/
+	if (status == JAMC_SUCCESS)
+	{
+		status = jam_find_argument(&statement_buffer[index],
+			&expr_begin, &expr_end, &delimiter);
+
+		expr_begin += index;
+		expr_end += index;
+		delimiter += index;
+	}
+
+	if ((status == JAMC_SUCCESS) &&
+		(statement_buffer[delimiter] != JAMC_COMMA_CHAR))
+	{
+		status = JAMC_SYNTAX_ERROR;
+	}
+
+	if (status == JAMC_SUCCESS)
+	{
+		save_ch = statement_buffer[expr_end];
+		statement_buffer[expr_end] = JAMC_NULL_CHAR;
+		status = jam_get_array_argument(&statement_buffer[expr_begin],
+			&symbol_record, &literal_array_data,
+			&mask_start_index, &mask_stop_index, 3);
+		statement_buffer[expr_end] = save_ch;
+		index = delimiter + 1;
+	}
+
+	if ((status == JAMC_SUCCESS) &&
+		(literal_array_data != NULL) &&
+		(mask_start_index == 0) &&
+		(mask_stop_index > signal_count - 1))
+	{
+		mask_stop_index = signal_count - 1;
+	}
+
+	if ((status == JAMC_SUCCESS) &&
+		(mask_stop_index != mask_start_index + signal_count - 1))
+	{
+		status = JAMC_BOUNDS_ERROR;
+	}
+
+	if (status == JAMC_SUCCESS)
+	{
+		if (symbol_record != NULL)
+		{
+			heap_record = (JAMS_HEAP_RECORD *)symbol_record->value;
+
+			if (heap_record != NULL)
+			{
+				mask_data = heap_record->data;
+			}
+			else
+			{
+				status = JAMC_INTERNAL_ERROR;
+			}
+		}
+		else if (literal_array_data != NULL)
+		{
+			mask_data = literal_array_data;
+		}
+		else
+		{
+			status = JAMC_INTERNAL_ERROR;
+		}
+	}
+
+	/*
+	*	Find the third argument -- should be the result variable
+	*/
+	if (status == JAMC_SUCCESS)
+	{
+		status = jam_find_argument(&statement_buffer[index],
+			&expr_begin, &expr_end, &delimiter);
+
+		expr_begin += index;
+		expr_end += index;
+		delimiter += index;
+	}
+
+	if ((status == JAMC_SUCCESS) &&
+		(statement_buffer[delimiter] != JAMC_SEMICOLON_CHAR))
+	{
+		status = JAMC_SYNTAX_ERROR;
+	}
+
+	/*
+	*	Result must be a scalar Boolean variable
+	*/
+	if (status == JAMC_SUCCESS)
+	{
+		save_ch = statement_buffer[expr_end];
+		statement_buffer[expr_end] = JAMC_NULL_CHAR;
+		status = jam_get_symbol_record(&statement_buffer[expr_begin],
+			&symbol_record);
+		statement_buffer[expr_end] = save_ch;
+
+		if ((status == JAMC_SUCCESS) &&
+			(symbol_record->type != JAM_BOOLEAN_SYMBOL))
+		{
+			status = JAMC_TYPE_MISMATCH;
+		}
+	}
+
+	/*
+	*	Find some free memory on the heap
+	*/
+	if (status == JAMC_SUCCESS)
+	{
+		temp_array = jam_get_temp_workspace((signal_count >> 3) + 4);
+
+		if (temp_array == NULL)
+		{
+			status = JAMC_OUT_OF_MEMORY;
+		}
+	}
+
+	/*
+	*	Do the VECTOR operation, saving the result in temp_array
+	*/
+	if (status == JAMC_SUCCESS)
+	{
+		if (jam_vector_io(signal_count, dir_vector, data_vector,
+			temp_array) != signal_count)
+		{
+			status = JAMC_INTERNAL_ERROR;
+		}
+	}
+
+	/*
+	*	Mask the data and do the comparison
+	*/
+	if (status == JAMC_SUCCESS)
+	{
+		for (bit = 0; (bit < signal_count) && result; ++bit)
+		{
+			actual = temp_array[bit >> 5] & (1L << (bit & 0x1f)) ? 1 : 0;
+			expected = comp_data[(bit + comp_start_index) >> 5]
+				& (1L << ((bit + comp_start_index) & 0x1f)) ? 1 : 0;
+			mask = mask_data[(bit + mask_start_index) >> 5]
+				& (1L << ((bit + mask_start_index) & 0x1f)) ? 1 : 0;
+
+			if ((actual & mask) != (expected & mask))
+			{
+				result = FALSE;
+			}
+		}
+
+		symbol_record->value = result ? 1L : 0L;
+	}
+
+	if (temp_array != NULL) jam_free_temp_workspace(temp_array);
 
 	return (status);
 }
@@ -4326,10 +7782,6 @@ JAM_RETURN_TYPE jam_process_vector
 /*																			*/
 /*	Description:	Applies signals to non-JTAG hardware interface.  There	*/
 /*					are three versions:  output only, compare, and capture.	*/
-/*																			*/
-/*					NOTE:  This function is not complete.  Need to add		*/
-/*					support for CAPTURE and COMPARE syntax, and handle the	*/
-/*					case of non-zero start indices.  Also, it is untested.	*/
 /*																			*/
 /*	Returns:		JAMC_SUCCESS for success, else appropriate error code	*/
 /*																			*/
@@ -4354,6 +7806,11 @@ JAM_RETURN_TYPE jam_process_vector
 	JAMS_SYMBOL_RECORD *symbol_record = NULL;
 	JAMS_HEAP_RECORD *heap_record = NULL;
 	JAM_RETURN_TYPE status = JAMC_SYNTAX_ERROR;
+
+	if ((jam_version == 2) && (jam_phase != JAM_PROCEDURE_PHASE))
+	{
+		return (JAMC_PHASE_ERROR);
+	}
 
 	index = jam_skip_instruction_name(statement_buffer);
 
@@ -4435,7 +7892,7 @@ JAM_RETURN_TYPE jam_process_vector
 		statement_buffer[expr_end] = JAMC_NULL_CHAR;
 		status = jam_get_array_argument(&statement_buffer[expr_begin],
 			&symbol_record, &literal_array_data,
-			&data_start_index, &data_stop_index, 0);
+			&data_start_index, &data_stop_index, 1);
 		statement_buffer[expr_end] = save_ch;
 	}
 
@@ -4464,7 +7921,8 @@ JAM_RETURN_TYPE jam_process_vector
 		}
 	}
 
-	if (status == JAMC_SUCCESS)
+	if ((status == JAMC_SUCCESS) &&
+		(statement_buffer[delimiter] == JAMC_SEMICOLON_CHAR))
 	{
 		/*
 		*	Do a simple VECTOR operation -- no capture or compare
@@ -4472,16 +7930,44 @@ JAM_RETURN_TYPE jam_process_vector
 		if (jam_vector_io(jam_vector_signal_count,
 			dir_vector, data_vector, NULL) != jam_vector_signal_count)
 		{
-			status = JAMC_UNSUPPORTED_FEATURE;
+			status = JAMC_INTERNAL_ERROR;
+		}
+	}
+	else if ((status == JAMC_SUCCESS) &&
+		(statement_buffer[delimiter] == JAMC_COMMA_CHAR))
+	{
+		/*
+		*	Delimiter was a COMMA, so look for CAPTURE or COMPARE keyword
+		*/
+		index = delimiter + 1;
+		while (jam_isspace(statement_buffer[index]))
+		{
+			++index;	/* skip over white space */
 		}
 
-
-		/*
-		*	Need to add support for CAPTURE and COMPARE, and non-zero
-		*	start indices.  Also needs more error checking.
-		*/
+		if ((jam_strncmp(&statement_buffer[index], "CAPTURE", 7) == 0) &&
+			(jam_isspace(statement_buffer[index + 7])))
+		{
+			/*
+			*	Do a VECTOR with capture
+			*/
+			status = jam_process_vector_capture(&statement_buffer[index + 8],
+				jam_vector_signal_count, dir_vector, data_vector);
+		}
+		else if ((jam_strncmp(&statement_buffer[index], "COMPARE", 7) == 0) &&
+			(jam_isspace(statement_buffer[index + 7])))
+		{
+			/*
+			*	Do a VECTOR with compare
+			*/
+			status = jam_process_vector_compare(&statement_buffer[index + 8],
+				jam_vector_signal_count, dir_vector, data_vector);
+		}
+		else
+		{
+			status = JAMC_SYNTAX_ERROR;
+		}
 	}
-	
 
 	return (status);
 }
@@ -4507,6 +7993,11 @@ JAM_RETURN_TYPE jam_process_vmap
 	int signal_count = 0;
 	char *signal_names[JAMC_MAX_VECTOR_SIGNALS];
 	JAM_RETURN_TYPE status = JAMC_SUCCESS;
+
+	if ((jam_version == 2) && (jam_phase != JAM_PROCEDURE_PHASE))
+	{
+		return (JAMC_PHASE_ERROR);
+	}
 
 	index = jam_skip_instruction_name(statement_buffer);
 
@@ -4595,13 +8086,24 @@ JAM_RETURN_TYPE jam_process_vmap
 
 	if (status == JAMC_SUCCESS)
 	{
+		if (jam_version == 2)
+		{
+			/* For Jam 2.0, reverse the order of the signal names */
+			for (index = signal_count / 2; index > 0; --index)
+			{
+				signal_names[signal_count] = signal_names[index - 1];
+				signal_names[index - 1] = signal_names[signal_count - index];
+				signal_names[signal_count - index] = signal_names[signal_count];
+			}
+		}
+
 		if (jam_vector_map(signal_count, signal_names) == signal_count)
 		{
 			jam_vector_signal_count = signal_count;
 		}
 		else
 		{
-			status = JAMC_UNSUPPORTED_FEATURE;
+			status = JAMC_VECTOR_MAP_FAILED;
 			jam_vector_signal_count = 0;
 		}
 	}
@@ -4735,6 +8237,11 @@ JAM_RETURN_TYPE jam_process_wait
 	JAME_JTAG_STATE end_state = IDLE;
 	JAM_RETURN_TYPE status = JAMC_SYNTAX_ERROR;
 
+	if ((jam_version == 2) && (jam_phase != JAM_PROCEDURE_PHASE))
+	{
+		return (JAMC_PHASE_ERROR);
+	}
+
 	index = jam_skip_instruction_name(statement_buffer);
 
 	do
@@ -4843,6 +8350,20 @@ JAM_RETURN_TYPE jam_process_wait
 	return (status);
 }
 
+void jam_free_literal_aca_buffers(void)
+{
+	int i;
+
+	for (i = 0; i < JAMC_MAX_LITERAL_ARRAYS; ++i)
+	{
+		if (jam_literal_aca_buffer[i] != NULL)
+		{
+			jam_free(jam_literal_aca_buffer[i]);
+			jam_literal_aca_buffer[i] = NULL;
+		}
+	}
+}
+
 /****************************************************************************/
 /*																			*/
 
@@ -4869,16 +8390,25 @@ JAM_RETURN_TYPE jam_execute_statement
 
 	switch (instruction_code)
 	{
+	case JAM_ACTION_INSTR:
+		status = jam_process_action(statement_buffer, done, exit_code);
+		break;
+
 	case JAM_BOOLEAN_INSTR:
 		status = jam_process_boolean(statement_buffer);
 		break;
 
 	case JAM_CALL_INSTR:
-		status = jam_process_call_or_goto(statement_buffer, TRUE);
+		status = jam_process_call_or_goto(statement_buffer, TRUE, done,
+			exit_code);
 		break;
 
 	case JAM_CRC_INSTR:
-		status = JAMC_SYNTAX_ERROR;
+		status = JAMC_PHASE_ERROR;
+		break;
+
+	case JAM_DATA_INSTR:
+		status = jam_process_data(statement_buffer);
 		break;
 
 	case JAM_DRSCAN_INSTR:
@@ -4887,6 +8417,14 @@ JAM_RETURN_TYPE jam_execute_statement
 
 	case JAM_DRSTOP_INSTR:
 		status = jam_process_drstop(statement_buffer);
+		break;
+
+	case JAM_ENDDATA_INSTR:
+		status = jam_process_return(statement_buffer, TRUE);
+		break;
+
+	case JAM_ENDPROC_INSTR:
+		status = jam_process_return(statement_buffer, TRUE);
 		break;
 
 	case JAM_EXIT_INSTR:
@@ -4901,8 +8439,13 @@ JAM_RETURN_TYPE jam_execute_statement
 		status = jam_process_for(statement_buffer);
 		break;
 
+	case JAM_FREQUENCY_INSTR:
+		status = jam_process_frequency(statement_buffer);
+		break;
+
 	case JAM_GOTO_INSTR:
-		status = jam_process_call_or_goto(statement_buffer, FALSE);
+		status = jam_process_call_or_goto(statement_buffer, FALSE, done,
+			exit_code);
 		break;
 
 	case JAM_IF_INSTR:
@@ -4922,7 +8465,7 @@ JAM_RETURN_TYPE jam_execute_statement
 		break;
 
 	case JAM_LET_INSTR:
-		status = jam_process_let(statement_buffer);
+		status = jam_process_assignment(statement_buffer, TRUE);
 		break;
 
 	case JAM_NEXT_INSTR:
@@ -4931,6 +8474,14 @@ JAM_RETURN_TYPE jam_execute_statement
 
 	case JAM_NOTE_INSTR:
 		/* ignore NOTE statements during execution */
+		if (jam_phase == JAM_UNKNOWN_PHASE)
+		{
+			jam_phase = JAM_NOTE_PHASE;
+		}
+		if ((jam_version == 2) && (jam_phase != JAM_NOTE_PHASE))
+		{
+			status = JAMC_PHASE_ERROR;
+		}
 		break;
 
 	case JAM_PADDING_INSTR:
@@ -4941,8 +8492,19 @@ JAM_RETURN_TYPE jam_execute_statement
 		status = jam_process_pop(statement_buffer);
 		break;
 
+	case JAM_POSTDR_INSTR:
+	case JAM_POSTIR_INSTR:
+	case JAM_PREDR_INSTR:
+	case JAM_PREIR_INSTR:
+		status = jam_process_pre_post(instruction_code, statement_buffer);
+		break;
+
 	case JAM_PRINT_INSTR:
 		status = jam_process_print(statement_buffer);
+		break;
+
+	case JAM_PROCEDURE_INSTR:
+		status = jam_process_procedure(statement_buffer);
 		break;
 
 	case JAM_PUSH_INSTR:
@@ -4954,11 +8516,15 @@ JAM_RETURN_TYPE jam_execute_statement
 		break;
 
 	case JAM_RETURN_INSTR:
-		status = jam_process_return(statement_buffer);
+		status = jam_process_return(statement_buffer, FALSE);
 		break;
 
 	case JAM_STATE_INSTR:
 		status = jam_process_state(statement_buffer);
+		break;
+
+	case JAM_TRST_INSTR:
+		status = jam_process_trst(statement_buffer);
 		break;
 
 	case JAM_VECTOR_INSTR:
@@ -4974,10 +8540,18 @@ JAM_RETURN_TYPE jam_execute_statement
 		break;
 
 	default:
-		status = JAMC_SYNTAX_ERROR;
+		if ((jam_version == 2) && (jam_check_assignment(statement_buffer)))
+		{
+			status = jam_process_assignment(statement_buffer, FALSE);
+		}
+		else
+		{
+			status = JAMC_SYNTAX_ERROR;
+		}
 		break;
 	}
 
+	jam_free_literal_aca_buffers();
 	return (status);
 }
 
@@ -5024,14 +8598,19 @@ long jam_get_line_of_position
 /*																			*/
 JAM_RETURN_TYPE jam_execute
 (
-	char **init_list,
+	char *program,
+	long program_size,
 	char *workspace,
-	long size,
+	long workspace_size,
+	char *action,
+	char **init_list,
+	int reset_jtag,
 	long *error_line,
-	int *exit_code
+	int *exit_code,
+	int *format_version
 )
 /*																			*/
-/*	Description:	This is the main entry point for executing an JAM		*/
+/*	Description:	This is the main entry point for executing a JAM		*/
 /*					program.  It returns after execution has terminated.	*/
 /*					The program data is not passed into this function,		*/
 /*					but is accessed through the jam_getc() function.		*/
@@ -5042,17 +8621,42 @@ JAM_RETURN_TYPE jam_execute
 /****************************************************************************/
 {
 	JAM_RETURN_TYPE status = JAMC_SUCCESS;
-	char statement_buffer[JAMC_MAX_STATEMENT_LENGTH + 1];
+	char *statement_buffer = NULL;
+	unsigned int statement_buffer_size = 0;
 	char label_buffer[JAMC_MAX_NAME_LENGTH + 1];
 	BOOL done = FALSE;
 	BOOL reuse_statement_buffer = FALSE;
+	int i = 0;
 
-	jam_init_list = init_list;
+	jam_program = program;
+	jam_program_size = program_size;
 	jam_workspace = workspace;
-	jam_workspace_size = size;
+	jam_workspace_size = workspace_size;
+	jam_action = action;
+	jam_init_list = init_list;
+
 	jam_current_file_position = 0L;
 	jam_current_statement_position = 0L;
 	jam_next_statement_position = 0L;
+	jam_vector_signal_count = 0;
+	jam_version = 0;
+	jam_phase = JAM_UNKNOWN_PHASE;
+	jam_current_block = NULL;
+
+	for (i = 0; i < JAMC_MAX_LITERAL_ARRAYS; ++i)
+	{
+		jam_literal_aca_buffer[i] = NULL;
+	}
+
+	/*
+	*	Ensure that workspace is DWORD aligned
+	*/
+	if (jam_workspace != NULL)
+	{
+		jam_workspace_size -= (((long)jam_workspace) & 3L);
+		jam_workspace_size &= (~3L);
+		jam_workspace = (char *) (((long)jam_workspace + 3L) & (~3L));
+	}
 
 	/*
 	*	Initialize symbol table and stack
@@ -5066,12 +8670,22 @@ JAM_RETURN_TYPE jam_execute
 
 	if (status == JAMC_SUCCESS)
 	{
+		status = jam_init_jtag();
+	}
+
+	if (status == JAMC_SUCCESS)
+	{
 		status = jam_init_heap();
 	}
 
 	if (status == JAMC_SUCCESS)
 	{
 		status = jam_seek(0L);
+	}
+
+	if (status == JAMC_SUCCESS)
+	{
+		status = jam_init_statement_buffer(&statement_buffer, &statement_buffer_size);
 	}
 
 	/*
@@ -5086,7 +8700,6 @@ JAM_RETURN_TYPE jam_execute
 				statement_buffer,
 				label_buffer
 			);
-
 			if ((status == JAMC_SUCCESS)
 				&& (label_buffer[0] != JAMC_NULL_CHAR))
 			{
@@ -5122,6 +8735,16 @@ JAM_RETURN_TYPE jam_execute
 		*error_line = jam_get_line_of_position(
 			jam_current_statement_position);
 	}
+
+	jam_free_literal_aca_buffers();
+	jam_free_jtag_padding_buffers(reset_jtag);
+	jam_free_heap();
+	jam_free_stack();
+	jam_free_symbol_table();
+
+	jam_free_statement_buffer(&statement_buffer, &statement_buffer_size);
+
+	if (format_version != NULL) *format_version = jam_version;
 
 	return (status);
 }

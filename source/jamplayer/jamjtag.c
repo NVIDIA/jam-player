@@ -8,11 +8,18 @@
 /*					functions for reading array initialization data in		*/
 /*					compressed formats.										*/
 /*																			*/
+/*	Revisions:		2.2  updated state transition paths						*/
+/*					2.0  added multi-page scan code for 16-bit PORT			*/
+/*					1.1 allow WAIT USECS without using JTAG hardware if		*/
+/*					JTAG hardware has not yet been initialized -- this is	*/
+/*					needed to create delays in VECTOR (non-JTAG) programs	*/
+/*																			*/
 /****************************************************************************/
 
 #include "jamexprt.h"
 #include "jamdefs.h"
 #include "jamsym.h"
+#include "jamstack.h"
 #include "jamutil.h"
 #include "jamjtag.h"
 
@@ -34,6 +41,14 @@ int jam_dr_preamble  = 0;
 int jam_dr_postamble = 0;
 int jam_ir_preamble  = 0;
 int jam_ir_postamble = 0;
+int jam_dr_length    = 0;
+int jam_ir_length    = 0;
+long *jam_dr_preamble_data  = NULL;
+long *jam_dr_postamble_data = NULL;
+long *jam_ir_preamble_data  = NULL;
+long *jam_ir_postamble_data = NULL;
+char *jam_dr_buffer         = NULL;
+char *jam_ir_buffer         = NULL;
 
 /*
 *	Table of JTAG state names
@@ -103,27 +118,33 @@ struct JAMS_JTAG_MACHINE
 */
 unsigned short jam_jtag_path_map[16] =
 {
-	0x0001, 0xFFFD, 0xFE01, 0xFFE7, 0xFFEF, 0xFF0F, 0xFFBF, 0xFF0F,
-	0xFEFD, 0x0001, 0xF3FF, 0xF7FF, 0x87FF, 0xDFFF, 0x87FF, 0x7FFD
+/*    RST     RTI    SDRS     CDR     SDR    E1DR     PDR    E2DR       */
+	0x0001, 0xFFFD, 0xFE01, 0xFFE7, 0xFFEF, 0xFF0F, 0xFFBF, 0xFFFF,
+/*    UDR    SIRS     CIR     SIR    E1IR     PIR    E2IR     UIR       */
+	0xFEFD, 0x0001, 0xF3FF, 0xF7FF, 0x87FF, 0xDFFF, 0xFFFF, 0x7FFD
 };
 
 /*
 *	Flag bits for jam_jtag_io() function
 */
-#define TMS_HIGH 0x01
-#define TMS_LOW  0x00
-#define TDI_HIGH 0x02
-#define TDI_LOW  0x00
-#define READ_TDO 0x04
+#define TMS_HIGH   1
+#define TMS_LOW    0
+#define TDI_HIGH   1
+#define TDI_LOW    0
+#define READ_TDO   1
+#define IGNORE_TDO 0
 
 /****************************************************************************/
 /*																			*/
 
-JAM_RETURN_TYPE jam_init_jtag()
+JAM_RETURN_TYPE jam_init_jtag(void)
 
 /*																			*/
 /****************************************************************************/
 {
+	void **symbol_table = NULL;
+	JAMS_STACK_RECORD *stack = NULL;
+
 	/* initial JTAG state is unknown */
 	jam_jtag_state = JAM_ILLEGAL_JTAG_STATE;
 
@@ -134,6 +155,29 @@ JAM_RETURN_TYPE jam_init_jtag()
 	jam_dr_postamble = 0;
 	jam_ir_preamble  = 0;
 	jam_ir_postamble = 0;
+	jam_dr_length    = 0;
+	jam_ir_length    = 0;
+
+	if (jam_workspace != NULL)
+	{
+		symbol_table = (void **) jam_workspace;
+		stack = (JAMS_STACK_RECORD *) &symbol_table[JAMC_MAX_SYMBOL_COUNT];
+		jam_dr_preamble_data = (long *) &stack[JAMC_MAX_NESTING_DEPTH];
+		jam_dr_postamble_data = &jam_dr_preamble_data[JAMC_MAX_JTAG_DR_PREAMBLE / 32];
+		jam_ir_preamble_data = &jam_dr_postamble_data[JAMC_MAX_JTAG_DR_POSTAMBLE / 32];
+		jam_ir_postamble_data = &jam_ir_preamble_data[JAMC_MAX_JTAG_IR_PREAMBLE / 32];
+		jam_dr_buffer = (char * )&jam_ir_postamble_data[JAMC_MAX_JTAG_IR_POSTAMBLE / 32];
+		jam_ir_buffer = &jam_dr_buffer[JAMC_MAX_JTAG_DR_LENGTH / 8];
+	}
+	else
+	{
+		jam_dr_preamble_data  = NULL;
+		jam_dr_postamble_data = NULL;
+		jam_ir_preamble_data  = NULL;
+		jam_ir_postamble_data = NULL;
+		jam_dr_buffer         = NULL;
+		jam_ir_buffer         = NULL;
+	}
 
 	return (JAMC_SUCCESS);
 }
@@ -173,29 +217,343 @@ JAM_RETURN_TYPE jam_set_irstop_state
 /****************************************************************************/
 /*																			*/
 
-JAM_RETURN_TYPE jam_set_jtag_padding
+JAM_RETURN_TYPE jam_set_dr_preamble
 (
-	int dr_preamble,
-	int dr_postamble,
-	int ir_preamble,
-	int ir_postamble
+	int count,
+	int start_index,
+	long *data
 )
 
 /*																			*/
 /****************************************************************************/
 {
-	jam_dr_preamble  = dr_preamble;
-	jam_dr_postamble = dr_postamble;
-	jam_ir_preamble  = ir_preamble;
-	jam_ir_postamble = ir_postamble;
+	JAM_RETURN_TYPE status = JAMC_SUCCESS;
+	int alloc_longs = 0;
+	int i = 0;
+	int bit = 0;
 
-	return (JAMC_SUCCESS);
+	if (count >= 0)
+	{
+		if (jam_workspace != NULL)
+		{
+			if (count > JAMC_MAX_JTAG_DR_PREAMBLE)
+			{
+				status = JAMC_OUT_OF_MEMORY;
+			}
+			else
+			{
+				jam_dr_preamble = count;
+			}
+		}
+		else
+		{
+			if (count > jam_dr_preamble)
+			{
+				alloc_longs = (count + 31) >> 5;
+				jam_free(jam_dr_preamble_data);
+				jam_dr_preamble_data = (long *) jam_malloc(
+					alloc_longs * sizeof(long));
+
+				if (jam_dr_preamble_data == NULL)
+				{
+					status = JAMC_OUT_OF_MEMORY;
+				}
+				else
+				{
+					jam_dr_preamble = count;
+				}
+			}
+			else
+			{
+				jam_dr_preamble = count;
+			}
+		}
+
+		if (status == JAMC_SUCCESS)
+		{
+			for (i = 0; i < count; ++i)
+			{
+				bit = i + start_index;
+
+				if (data == NULL)
+				{
+					jam_dr_preamble_data[i >> 5] |= (1L << (bit & 0x1f));
+				}
+				else
+				{
+					if (data[bit >> 5] & (1L << (bit & 0x1f)))
+					{
+						jam_dr_preamble_data[i >> 5] |= (1L << (bit & 0x1f));
+					}
+					else
+					{
+						jam_dr_preamble_data[i >> 5] &=
+							~(unsigned long) (1L << (bit & 0x1f));
+					}
+				}
+			}
+		}
+	}
+
+	return (status);
 }
 
 /****************************************************************************/
 /*																			*/
 
-void jam_jtag_reset_idle()
+JAM_RETURN_TYPE jam_set_ir_preamble
+(
+	int count,
+	int start_index,
+	long *data
+)
+
+/*																			*/
+/****************************************************************************/
+{
+	JAM_RETURN_TYPE status = JAMC_SUCCESS;
+	int alloc_longs = 0;
+	int i = 0;
+	int bit = 0;
+
+	if (count >= 0)
+	{
+		if (jam_workspace != NULL)
+		{
+			if (count > JAMC_MAX_JTAG_IR_PREAMBLE)
+			{
+				status = JAMC_OUT_OF_MEMORY;
+			}
+			else
+			{
+				jam_ir_preamble = count;
+			}
+		}
+		else
+		{
+			if (count > jam_ir_preamble)
+			{
+				alloc_longs = (count + 31) >> 5;
+				jam_free(jam_ir_preamble_data);
+				jam_ir_preamble_data = (long *) jam_malloc(
+					alloc_longs * sizeof(long));
+
+				if (jam_ir_preamble_data == NULL)
+				{
+					status = JAMC_OUT_OF_MEMORY;
+				}
+				else
+				{
+					jam_ir_preamble = count;
+				}
+			}
+			else
+			{
+				jam_ir_preamble = count;
+			}
+		}
+
+		if (status == JAMC_SUCCESS)
+		{
+			for (i = 0; i < count; ++i)
+			{
+				bit = i + start_index;
+
+				if (data == NULL)
+				{
+					jam_ir_preamble_data[i >> 5] |= (1L << (bit & 0x1f));
+				}
+				else
+				{
+					if (data[bit >> 5] & (1L << (bit & 0x1f)))
+					{
+						jam_ir_preamble_data[i >> 5] |= (1L << (bit & 0x1f));
+					}
+					else
+					{
+						jam_ir_preamble_data[i >> 5] &=
+							~(unsigned long) (1L << (bit & 0x1f));
+					}
+				}
+			}
+		}
+	}
+
+	return (status);
+}
+
+/****************************************************************************/
+/*																			*/
+
+JAM_RETURN_TYPE jam_set_dr_postamble
+(
+	int count,
+	int start_index,
+	long *data
+)
+
+/*																			*/
+/****************************************************************************/
+{
+	JAM_RETURN_TYPE status = JAMC_SUCCESS;
+	int alloc_longs = 0;
+	int i = 0;
+	int bit = 0;
+
+	if (count >= 0)
+	{
+		if (jam_workspace != NULL)
+		{
+			if (count > JAMC_MAX_JTAG_DR_POSTAMBLE)
+			{
+				status = JAMC_OUT_OF_MEMORY;
+			}
+			else
+			{
+				jam_dr_postamble = count;
+			}
+		}
+		else
+		{
+			if (count > jam_dr_postamble)
+			{
+				alloc_longs = (count + 31) >> 5;
+				jam_free(jam_dr_postamble_data);
+				jam_dr_postamble_data = (long *) jam_malloc(
+					alloc_longs * sizeof(long));
+
+				if (jam_dr_postamble_data == NULL)
+				{
+					status = JAMC_OUT_OF_MEMORY;
+				}
+				else
+				{
+					jam_dr_postamble = count;
+				}
+			}
+			else
+			{
+				jam_dr_postamble = count;
+			}
+		}
+
+		if (status == JAMC_SUCCESS)
+		{
+			for (i = 0; i < count; ++i)
+			{
+				bit = i + start_index;
+
+				if (data == NULL)
+				{
+					jam_dr_postamble_data[i >> 5] |= (1L << (bit & 0x1f));
+				}
+				else
+				{
+					if (data[bit >> 5] & (1L << (bit & 0x1f)))
+					{
+						jam_dr_postamble_data[i >> 5] |= (1L << (bit & 0x1f));
+					}
+					else
+					{
+						jam_dr_postamble_data[i >> 5] &=
+							~(unsigned long) (1L << (bit & 0x1f));
+					}
+				}
+			}
+		}
+	}
+
+	return (status);
+}
+
+/****************************************************************************/
+/*																			*/
+
+JAM_RETURN_TYPE jam_set_ir_postamble
+(
+	int count,
+	int start_index,
+	long *data
+)
+
+/*																			*/
+/****************************************************************************/
+{
+	JAM_RETURN_TYPE status = JAMC_SUCCESS;
+	int alloc_longs = 0;
+	int i = 0;
+	int bit = 0;
+
+	if (count >= 0)
+	{
+		if (jam_workspace != NULL)
+		{
+			if (count > JAMC_MAX_JTAG_IR_POSTAMBLE)
+			{
+				status = JAMC_OUT_OF_MEMORY;
+			}
+			else
+			{
+				jam_ir_postamble = count;
+			}
+		}
+		else
+		{
+			if (count > jam_ir_postamble)
+			{
+				alloc_longs = (count + 31) >> 5;
+				jam_free(jam_ir_postamble_data);
+				jam_ir_postamble_data = (long *) jam_malloc(
+					alloc_longs * sizeof(long));
+
+				if (jam_ir_postamble_data == NULL)
+				{
+					status = JAMC_OUT_OF_MEMORY;
+				}
+				else
+				{
+					jam_ir_postamble = count;
+				}
+			}
+			else
+			{
+				jam_ir_postamble = count;
+			}
+		}
+
+		if (status == JAMC_SUCCESS)
+		{
+			for (i = 0; i < count; ++i)
+			{
+				bit = i + start_index;
+
+				if (data == NULL)
+				{
+					jam_ir_postamble_data[i >> 5] |= (1L << (bit & 0x1f));
+				}
+				else
+				{
+					if (data[bit >> 5] & (1L << (bit & 0x1f)))
+					{
+						jam_ir_postamble_data[i >> 5] |= (1L << (bit & 0x1f));
+					}
+					else
+					{
+						jam_ir_postamble_data[i >> 5] &=
+							~(unsigned long) (1L << (bit & 0x1f));
+					}
+				}
+			}
+		}
+	}
+
+	return (status);
+}
+
+/****************************************************************************/
+/*																			*/
+
+void jam_jtag_reset_idle(void)
 
 /*																			*/
 /****************************************************************************/
@@ -207,13 +565,13 @@ void jam_jtag_reset_idle()
 	*/
 	for (i = 0; i < 5; ++i)
 	{
-		jam_jtag_io(TMS_HIGH | TDI_LOW);
+		jam_jtag_io(TMS_HIGH, TDI_LOW, IGNORE_TDO);
 	}
 
 	/*
 	*	Now step to Run Test / Idle
 	*/
-	jam_jtag_io(TMS_LOW | TDI_LOW);
+	jam_jtag_io(TMS_LOW, TDI_LOW, IGNORE_TDO);
 
 	jam_jtag_state = IDLE;
 }
@@ -251,11 +609,11 @@ JAM_RETURN_TYPE jam_goto_jtag_state
 			(state == IRSHIFT) ||
 			(state == IRPAUSE))
 		{
-			jam_jtag_io(TMS_LOW | TDI_LOW);
+			jam_jtag_io(TMS_LOW, TDI_LOW, IGNORE_TDO);
 		}
 		else if (state == RESET)
 		{
-			jam_jtag_io(TMS_HIGH | TDI_LOW);
+			jam_jtag_io(TMS_HIGH, TDI_LOW, IGNORE_TDO);
 		}
 	}
 	else
@@ -271,7 +629,7 @@ JAM_RETURN_TYPE jam_goto_jtag_state
 			/*
 			*	Take a step
 			*/
-			jam_jtag_io(tms | TDI_LOW);
+			jam_jtag_io(tms, TDI_LOW, IGNORE_TDO);
 
 			if (tms)
 			{
@@ -364,7 +722,7 @@ JAM_RETURN_TYPE jam_do_wait_cycles
 
 		for (count = 0L; count < cycles; count++)
 		{
-			jam_jtag_io(tms | TDI_LOW);
+			jam_jtag_io(tms, TDI_LOW, IGNORE_TDO);
 		}
 	}
 
@@ -382,7 +740,11 @@ JAM_RETURN_TYPE jam_do_wait_microseconds
 
 /*																			*/
 /*	Description:	Causes JTAG hardware to sit in the specified stable		*/
-/*					state for the specified duration of real time.			*/
+/*					state for the specified duration of real time.  If		*/
+/*					no JTAG operations have been performed yet, then only	*/
+/*					a delay is performed.  This permits the WAIT USECS		*/
+/*					statement to be used in VECTOR programs without causing	*/
+/*					any JTAG operations.									*/
 /*																			*/
 /*	Returns:		JAMC_SUCCESS for success, else appropriate error code	*/
 /*																			*/
@@ -390,7 +752,8 @@ JAM_RETURN_TYPE jam_do_wait_microseconds
 {
 	JAM_RETURN_TYPE status = JAMC_SUCCESS;
 
-	if (jam_jtag_state != wait_state)
+	if ((jam_jtag_state != JAM_ILLEGAL_JTAG_STATE) &&
+		(jam_jtag_state != wait_state))
 	{
 		status = jam_goto_jtag_state(wait_state);
 	}
@@ -401,6 +764,258 @@ JAM_RETURN_TYPE jam_do_wait_microseconds
 		*	Wait for specified time interval
 		*/
 		jam_delay(microseconds);
+	}
+
+	return (status);
+}
+
+/****************************************************************************/
+/*																			*/
+
+void jam_jtag_concatenate_data
+(
+	char *buffer,
+	long *preamble_data,
+	long preamble_count,
+	long *target_data,
+	long start_index,
+	long target_count,
+	long *postamble_data,
+	long postamble_count
+)
+
+/*																			*/
+/*	Description:	Copies preamble data, target data, and postamble data	*/
+/*					into one buffer for IR or DR scans.  Note that buffer	*/
+/*					is an array of char, while other arrays are of long		*/
+/*																			*/
+/*	Returns:		nothing													*/
+/*																			*/
+/****************************************************************************/
+{
+	long i = 0L;
+	long j = 0L;
+	long k = 0L;
+
+	for (i = 0L; i < preamble_count; ++i)
+	{
+		if (preamble_data[i >> 5] & (1L << (i & 0x1f)))
+		{
+			buffer[i >> 3] |= (1 << (i & 7));
+		}
+		else
+		{
+			buffer[i >> 3] &= ~(unsigned int) (1 << (i & 7));
+		}
+	}
+
+	j = start_index;
+	k = preamble_count + target_count;
+	for (; i < k; ++i, ++j)
+	{
+		if (target_data[j >> 5] & (1L << (j & 0x1f)))
+		{
+			buffer[i >> 3] |= (1 << (i & 7));
+		}
+		else
+		{
+			buffer[i >> 3] &= ~(unsigned int) (1 << (i & 7));
+		}
+	}
+
+	j = 0L;
+	k = preamble_count + target_count + postamble_count;
+	for (; i < k; ++i, ++j)
+	{
+		if (postamble_data[j >> 5] & (1L << (j & 0x1f)))
+		{
+			buffer[i >> 3] |= (1 << (i & 7));
+		}
+		else
+		{
+			buffer[i >> 3] &= ~(unsigned int) (1 << (i & 7));
+		}
+	}
+}
+
+/****************************************************************************/
+/*																			*/
+
+void jam_jtag_extract_target_data
+(
+	char *buffer,
+	long *target_data,
+	long start_index,
+	long preamble_count,
+	long target_count
+)
+
+/*																			*/
+/*	Description:	Copies target data from scan buffer, filtering out		*/
+/*					preamble and postamble data.   Note that buffer is an	*/
+/*					array of char, while target_data is an array of long	*/
+/*																			*/
+/*	Returns:		nothing													*/
+/*																			*/
+/****************************************************************************/
+{
+	long i = 0L;
+	long j = 0L;
+	long k = 0L;
+
+	j = preamble_count;
+	k = start_index + target_count;
+	for (i = start_index; i < k; ++i, ++j)
+	{
+		if (buffer[j >> 3] & (1 << (j & 7)))
+		{
+			target_data[i >> 5] |= (1L << (i & 0x1f));
+		}
+		else
+		{
+			target_data[i >> 5] &= ~(unsigned long) (1L << (i & 0x1f));
+		}
+	}
+}
+
+int jam_jtag_drscan
+(
+	int start_state,
+	int count,
+	char *tdi,
+	char *tdo
+)
+{
+	int i = 0;
+	int tdo_bit = 0;
+	int status = 1;
+
+	/*
+	*	First go to DRSHIFT state
+	*/
+	switch (start_state)
+	{
+	case 0:						/* IDLE */
+		jam_jtag_io(1, 0, 0);	/* DRSELECT */
+		jam_jtag_io(0, 0, 0);	/* DRCAPTURE */
+		jam_jtag_io(0, 0, 0);	/* DRSHIFT */
+		break;
+
+	case 1:						/* DRPAUSE */
+		jam_jtag_io(1, 0, 0);	/* DREXIT2 */
+		jam_jtag_io(1, 0, 0);	/* DRUPDATE */
+		jam_jtag_io(1, 0, 0);	/* DRSELECT */
+		jam_jtag_io(0, 0, 0);	/* DRCAPTURE */
+		jam_jtag_io(0, 0, 0);	/* DRSHIFT */
+		break;
+
+	case 2:						/* IRPAUSE */
+		jam_jtag_io(1, 0, 0);	/* IREXIT2 */
+		jam_jtag_io(1, 0, 0);	/* IRUPDATE */
+		jam_jtag_io(1, 0, 0);	/* DRSELECT */
+		jam_jtag_io(0, 0, 0);	/* DRCAPTURE */
+		jam_jtag_io(0, 0, 0);	/* DRSHIFT */
+		break;
+
+	default:
+		status = 0;
+	}
+
+	if (status)
+	{
+		/* loop in the SHIFT-DR state */
+		for (i = 0; i < count; i++)
+		{
+			tdo_bit = jam_jtag_io(
+				(i == count - 1),
+				tdi[i >> 3] & (1 << (i & 7)),
+				(tdo != NULL));
+
+			if (tdo != NULL)
+			{
+				if (tdo_bit)
+				{
+					tdo[i >> 3] |= (1 << (i & 7));
+				}
+				else
+				{
+					tdo[i >> 3] &= ~(unsigned int) (1 << (i & 7));
+				}
+			}
+		}
+
+		jam_jtag_io(0, 0, 0);	/* DRPAUSE */
+	}
+
+	return (status);
+}
+
+int jam_jtag_irscan
+(
+	int start_state,
+	int count,
+	char *tdi,
+	char *tdo
+)
+{
+	int i = 0;
+	int tdo_bit = 0;
+	int status = 1;
+
+	/*
+	*	First go to IRSHIFT state
+	*/
+	switch (start_state)
+	{
+	case 0:						/* IDLE */
+		jam_jtag_io(1, 0, 0);	/* DRSELECT */
+		jam_jtag_io(1, 0, 0);	/* IRSELECT */
+		jam_jtag_io(0, 0, 0);	/* IRCAPTURE */
+		jam_jtag_io(0, 0, 0);	/* IRSHIFT */
+		break;
+
+	case 1:						/* DRPAUSE */
+		jam_jtag_io(1, 0, 0);	/* DREXIT2 */
+		jam_jtag_io(1, 0, 0);	/* DRUPDATE */
+		jam_jtag_io(1, 0, 0);	/* DRSELECT */
+		jam_jtag_io(1, 0, 0);	/* IRSELECT */
+		jam_jtag_io(0, 0, 0);	/* IRCAPTURE */
+		jam_jtag_io(0, 0, 0);	/* IRSHIFT */
+		break;
+
+	case 2:						/* IRPAUSE */
+		jam_jtag_io(1, 0, 0);	/* IREXIT2 */
+		jam_jtag_io(0, 0, 0);	/* IRSHIFT */
+		break;
+
+	default:
+		status = 0;
+	}
+
+	if (status)
+	{
+		/* loop in the SHIFT-IR state */
+		for (i = 0; i < count; i++)
+		{
+			tdo_bit = jam_jtag_io(
+				(i == count - 1),
+				tdi[i >> 3] & (1 << (i & 7)),
+				(tdo != NULL));
+
+			if (tdo != NULL)
+			{
+				if (tdo_bit)
+				{
+					tdo[i >> 3] |= (1 << (i & 7));
+				}
+				else
+				{
+					tdo[i >> 3] &= ~(unsigned int) (1 << (i & 7));
+				}
+			}
+		}
+
+		jam_jtag_io(0, 0, 0);	/* IRPAUSE */
 	}
 
 	return (status);
@@ -423,43 +1038,274 @@ JAM_RETURN_TYPE jam_do_irscan
 /*																			*/
 /****************************************************************************/
 {
-	int tdi = 0;
-	long i = 0L;
-	long index = start_index;
-	long shift_count = count + jam_ir_preamble + jam_ir_postamble - 1;
+	int start_code = 0;
+	int alloc_chars = 0;
+	int shift_count = (int) (jam_ir_preamble + count + jam_ir_postamble);
 	JAM_RETURN_TYPE status = JAMC_SUCCESS;
+	JAME_JTAG_STATE start_state = JAM_ILLEGAL_JTAG_STATE;
 
-	status = jam_goto_jtag_state(IRSHIFT);
+	switch (jam_jtag_state)
+	{
+	case JAM_ILLEGAL_JTAG_STATE:
+	case RESET:
+	case IDLE:
+		start_code = 0;
+		start_state = IDLE;
+		break;
+
+	case DRSELECT:
+	case DRCAPTURE:
+	case DRSHIFT:
+	case DREXIT1:
+	case DRPAUSE:
+	case DREXIT2:
+	case DRUPDATE:
+		start_code = 1;
+		start_state = DRPAUSE;
+		break;
+
+	case IRSELECT:
+	case IRCAPTURE:
+	case IRSHIFT:
+	case IREXIT1:
+	case IRPAUSE:
+	case IREXIT2:
+	case IRUPDATE:
+		start_code = 2;
+		start_state = IRPAUSE;
+		break;
+
+	default:
+		status = JAMC_INTERNAL_ERROR;
+		break;
+	}
 
 	if (status == JAMC_SUCCESS)
 	{
-		/* loop in the SHIFT-IR state */
-		for (i = 0; i < shift_count; i++)
+		if (jam_jtag_state != start_state)
 		{
-			if ((i >= jam_ir_preamble) && (i < (count + jam_ir_preamble)))
+			status = jam_goto_jtag_state(start_state);
+		}
+	}
+
+	if (status == JAMC_SUCCESS)
+	{
+		if (jam_workspace != NULL)
+		{
+			if (shift_count > JAMC_MAX_JTAG_IR_LENGTH)
 			{
-				tdi = (data[index >> 5] & (1L << (index & 0x1f))) ?
-					TDI_HIGH : TDI_LOW;
-				++index;
+				status = JAMC_OUT_OF_MEMORY;
 			}
-			else tdi = TDI_HIGH;
-
-			jam_jtag_io(TMS_LOW | tdi);
 		}
-
-		if (jam_ir_postamble == 0)
+		else if (shift_count > jam_ir_length)
 		{
-			tdi = (data[index >> 5] & (1L << (index & 0x1f))) ?
-				TDI_HIGH : TDI_LOW;
+			alloc_chars = (shift_count + 7) >> 3;
+			jam_free(jam_ir_buffer);
+			jam_ir_buffer = (char *) jam_malloc(alloc_chars);
+
+			if (jam_ir_buffer == NULL)
+			{
+				status = JAMC_OUT_OF_MEMORY;
+			}
+			else
+			{
+				jam_ir_length = alloc_chars * 8;
+			}
 		}
-		else tdi = TDI_HIGH;
+	}
 
-		/* TMS high for last bit as we exit the SHIFT-IR state */
-		jam_jtag_io(TMS_HIGH | tdi);
+	if (status == JAMC_SUCCESS)
+	{
+		/*
+		*	Copy preamble data, IR data, and postamble data into a buffer
+		*/
+		jam_jtag_concatenate_data
+		(
+			jam_ir_buffer,
+			jam_ir_preamble_data,
+			jam_ir_preamble,
+			data,
+			start_index,
+			count,
+			jam_ir_postamble_data,
+			jam_ir_postamble
+		);
 
-		jam_jtag_state = IREXIT1;
+		/*
+		*	Do the IRSCAN
+		*/
+		jam_jtag_irscan
+		(
+			start_code,
+			shift_count,
+			jam_ir_buffer,
+			NULL
+		);
 
-		status = jam_goto_jtag_state(jam_irstop_state);
+		/* jam_jtag_irscan() always ends in IRPAUSE state */
+		jam_jtag_state = IRPAUSE;
+	}
+
+	if (status == JAMC_SUCCESS)
+	{
+		if (jam_irstop_state != IRPAUSE)
+		{
+			status = jam_goto_jtag_state(jam_irstop_state);
+		}
+	}
+
+	return (status);
+}
+
+/****************************************************************************/
+/*																			*/
+
+JAM_RETURN_TYPE jam_swap_ir
+(
+	long count,
+	long *in_data,
+	long in_index,
+	long *out_data,
+	long out_index
+)
+
+/*																			*/
+/*	Description:	Shifts data into instruction register, capturing output	*/
+/*					data													*/
+/*																			*/
+/*	Returns:		JAMC_SUCCESS for success, else appropriate error code	*/
+/*																			*/
+/****************************************************************************/
+{
+	int start_code = 0;
+	int alloc_chars = 0;
+	int shift_count = (int) (jam_ir_preamble + count + jam_ir_postamble);
+	JAM_RETURN_TYPE status = JAMC_SUCCESS;
+	JAME_JTAG_STATE start_state = JAM_ILLEGAL_JTAG_STATE;
+
+	switch (jam_jtag_state)
+	{
+	case JAM_ILLEGAL_JTAG_STATE:
+	case RESET:
+	case IDLE:
+		start_code = 0;
+		start_state = IDLE;
+		break;
+
+	case DRSELECT:
+	case DRCAPTURE:
+	case DRSHIFT:
+	case DREXIT1:
+	case DRPAUSE:
+	case DREXIT2:
+	case DRUPDATE:
+		start_code = 1;
+		start_state = DRPAUSE;
+		break;
+
+	case IRSELECT:
+	case IRCAPTURE:
+	case IRSHIFT:
+	case IREXIT1:
+	case IRPAUSE:
+	case IREXIT2:
+	case IRUPDATE:
+		start_code = 2;
+		start_state = IRPAUSE;
+		break;
+
+	default:
+		status = JAMC_INTERNAL_ERROR;
+		break;
+	}
+
+	if (status == JAMC_SUCCESS)
+	{
+		if (jam_jtag_state != start_state)
+		{
+			status = jam_goto_jtag_state(start_state);
+		}
+	}
+
+	if (status == JAMC_SUCCESS)
+	{
+		if (jam_workspace != NULL)
+		{
+			if (shift_count > JAMC_MAX_JTAG_IR_LENGTH)
+			{
+				status = JAMC_OUT_OF_MEMORY;
+			}
+		}
+		else if (shift_count > jam_ir_length)
+		{
+			alloc_chars = (shift_count + 7) >> 3;
+			jam_free(jam_ir_buffer);
+			jam_ir_buffer = (char *) jam_malloc(alloc_chars);
+
+			if (jam_ir_buffer == NULL)
+			{
+				status = JAMC_OUT_OF_MEMORY;
+			}
+			else
+			{
+				jam_ir_length = alloc_chars * 8;
+			}
+		}
+	}
+
+	if (status == JAMC_SUCCESS)
+	{
+		/*
+		*	Copy preamble data, IR data, and postamble data into a buffer
+		*/
+		jam_jtag_concatenate_data
+		(
+			jam_ir_buffer,
+			jam_ir_preamble_data,
+			jam_ir_preamble,
+			in_data,
+			in_index,
+			count,
+			jam_ir_postamble_data,
+			jam_ir_postamble
+		);
+
+		/*
+		*	Do the IRSCAN
+		*/
+		jam_jtag_irscan
+		(
+			start_code,
+			shift_count,
+			jam_ir_buffer,
+			jam_ir_buffer
+		);
+
+		/* jam_jtag_irscan() always ends in IRPAUSE state */
+		jam_jtag_state = IRPAUSE;
+	}
+
+	if (status == JAMC_SUCCESS)
+	{
+		if (jam_irstop_state != IRPAUSE)
+		{
+			status = jam_goto_jtag_state(jam_irstop_state);
+		}
+	}
+
+	if (status == JAMC_SUCCESS)
+	{
+		/*
+		*	Now extract the returned data from the buffer
+		*/
+		jam_jtag_extract_target_data
+		(
+			jam_ir_buffer,
+			out_data,
+			out_index,
+			jam_ir_preamble,
+			count
+		);
 	}
 
 	return (status);
@@ -482,43 +1328,120 @@ JAM_RETURN_TYPE jam_do_drscan
 /*																			*/
 /****************************************************************************/
 {
-	int tdi = 0;
-	long i = 0L;
-	long index = start_index;
-	long shift_count = count + jam_dr_preamble + jam_dr_postamble - 1;
+	int start_code = 0;
+	int alloc_chars = 0;
+	int shift_count = (int) (jam_dr_preamble + count + jam_dr_postamble);
 	JAM_RETURN_TYPE status = JAMC_SUCCESS;
+	JAME_JTAG_STATE start_state = JAM_ILLEGAL_JTAG_STATE;
 
-	status = jam_goto_jtag_state(DRSHIFT);
+	switch (jam_jtag_state)
+	{
+	case JAM_ILLEGAL_JTAG_STATE:
+	case RESET:
+	case IDLE:
+		start_code = 0;
+		start_state = IDLE;
+		break;
+
+	case DRSELECT:
+	case DRCAPTURE:
+	case DRSHIFT:
+	case DREXIT1:
+	case DRPAUSE:
+	case DREXIT2:
+	case DRUPDATE:
+		start_code = 1;
+		start_state = DRPAUSE;
+		break;
+
+	case IRSELECT:
+	case IRCAPTURE:
+	case IRSHIFT:
+	case IREXIT1:
+	case IRPAUSE:
+	case IREXIT2:
+	case IRUPDATE:
+		start_code = 2;
+		start_state = IRPAUSE;
+		break;
+
+	default:
+		status = JAMC_INTERNAL_ERROR;
+		break;
+	}
 
 	if (status == JAMC_SUCCESS)
 	{
-		/* loop in the SHIFT-DR state */
-		for (i = 0; i < shift_count; i++)
+		if (jam_jtag_state != start_state)
 		{
-			if ((i >= jam_dr_preamble) && (i < (count + jam_dr_preamble)))
+			status = jam_goto_jtag_state(start_state);
+		}
+	}
+
+	if (status == JAMC_SUCCESS)
+	{
+		if (jam_workspace != NULL)
+		{
+			if (shift_count > JAMC_MAX_JTAG_DR_LENGTH)
 			{
-				tdi = (data[index >> 5] & (1L << (index & 0x1f))) ?
-					TDI_HIGH : TDI_LOW;
-				++index;
+				status = JAMC_OUT_OF_MEMORY;
 			}
-			else tdi = TDI_LOW;
-
-			jam_jtag_io(TMS_LOW | tdi);
 		}
-
-		if (jam_dr_postamble == 0)
+		else if (shift_count > jam_dr_length)
 		{
-			tdi = (data[index >> 5] & (1L << (index & 0x1f))) ?
-				TDI_HIGH : TDI_LOW;
+			alloc_chars = (shift_count + 7) >> 3;
+			jam_free(jam_dr_buffer);
+			jam_dr_buffer = (char *) jam_malloc(alloc_chars);
+
+			if (jam_dr_buffer == NULL)
+			{
+				status = JAMC_OUT_OF_MEMORY;
+			}
+			else
+			{
+				jam_dr_length = alloc_chars * 8;
+			}
 		}
-		else tdi = TDI_LOW;
+	}
 
-		/* TMS high for last bit as we exit the SHIFT-DR state */
-		jam_jtag_io(TMS_HIGH | tdi);
+	if (status == JAMC_SUCCESS)
+	{
+		/*
+		*	Copy preamble data, DR data, and postamble data into a buffer
+		*/
+		jam_jtag_concatenate_data
+		(
+			jam_dr_buffer,
+			jam_dr_preamble_data,
+			jam_dr_preamble,
+			data,
+			start_index,
+			count,
+			jam_dr_postamble_data,
+			jam_dr_postamble
+		);
 
-		jam_jtag_state = DREXIT1;
+		/*
+		*	Do the DRSCAN
+		*/
+		jam_jtag_drscan
+		(
+			start_code,
+			shift_count,
+			jam_dr_buffer,
+			NULL
+		);
 
-		status = jam_goto_jtag_state(jam_drstop_state);
+		/* jam_jtag_drscan() always ends in DRPAUSE state */
+		jam_jtag_state = DRPAUSE;
+	}
+
+	if (status == JAMC_SUCCESS)
+	{
+		if (jam_drstop_state != DRPAUSE)
+		{
+			status = jam_goto_jtag_state(jam_drstop_state);
+		}
 	}
 
 	return (status);
@@ -543,72 +1466,196 @@ JAM_RETURN_TYPE jam_swap_dr
 /*																			*/
 /****************************************************************************/
 {
-	int tdi = 0;
-	int tdo = 0;
-	long i = 0L;
-	long shift_count = count + jam_dr_preamble + jam_dr_postamble - 1L;
+	int start_code = 0;
+	int alloc_chars = 0;
+	int shift_count = (int) (jam_dr_preamble + count + jam_dr_postamble);
 	JAM_RETURN_TYPE status = JAMC_SUCCESS;
+	JAME_JTAG_STATE start_state = JAM_ILLEGAL_JTAG_STATE;
 
-	status = jam_goto_jtag_state(DRSHIFT);
+	switch (jam_jtag_state)
+	{
+	case JAM_ILLEGAL_JTAG_STATE:
+	case RESET:
+	case IDLE:
+		start_code = 0;
+		start_state = IDLE;
+		break;
+
+	case DRSELECT:
+	case DRCAPTURE:
+	case DRSHIFT:
+	case DREXIT1:
+	case DRPAUSE:
+	case DREXIT2:
+	case DRUPDATE:
+		start_code = 1;
+		start_state = DRPAUSE;
+		break;
+
+	case IRSELECT:
+	case IRCAPTURE:
+	case IRSHIFT:
+	case IREXIT1:
+	case IRPAUSE:
+	case IREXIT2:
+	case IRUPDATE:
+		start_code = 2;
+		start_state = IRPAUSE;
+		break;
+
+	default:
+		status = JAMC_INTERNAL_ERROR;
+		break;
+	}
 
 	if (status == JAMC_SUCCESS)
 	{
-		/* loop in the SHIFT-DR state */
-		for (i = 0; i < shift_count; i++)
+		if (jam_jtag_state != start_state)
 		{
-			if ((i >= jam_dr_preamble) && (i < (count + jam_dr_preamble)))
-			{
-				tdi = (in_data[in_index >> 5] & (1L << (in_index & 0x1f))) ?
-					TDI_HIGH : TDI_LOW;
-				++in_index;
-			}
-			else tdi = TDI_LOW;
+			status = jam_goto_jtag_state(start_state);
+		}
+	}
 
-			tdo = jam_jtag_io(tdi | TMS_LOW | READ_TDO);
-
-			if ((i >= (jam_dr_preamble)) &&
-				(i < (count + jam_dr_preamble)))
+	if (status == JAMC_SUCCESS)
+	{
+		if (jam_workspace != NULL)
+		{
+			if (shift_count > JAMC_MAX_JTAG_DR_LENGTH)
 			{
-				if (tdo)
-				{
-					out_data[out_index >> 5] |= (1L << (out_index & 0x1f));
-				}
-				else
-				{
-					out_data[out_index >> 5] &= ~(unsigned long)
-						(1L << (out_index & 0x1f));
-				}
-				++out_index;
+				status = JAMC_OUT_OF_MEMORY;
 			}
 		}
-
-		if (jam_dr_postamble == 0)
+		else if (shift_count > jam_dr_length)
 		{
-			tdi = (in_data[in_index >> 5] & (1L << (in_index & 0x1f))) ?
-				TDI_HIGH : TDI_LOW;
-		}
-		else tdi = TDI_LOW;
+			alloc_chars = (shift_count + 7) >> 3;
+			jam_free(jam_dr_buffer);
+			jam_dr_buffer = (char *) jam_malloc(alloc_chars);
 
-		/* TMS high for last bit as we exit the SHIFT-DR state */
-		tdo = jam_jtag_io(tdi | TMS_HIGH | READ_TDO);
-
-		if (jam_dr_postamble == 0)
-		{
-			if (tdo)
+			if (jam_dr_buffer == NULL)
 			{
-				out_data[out_index >> 5] |= (1L << (out_index & 0x1f));
+				status = JAMC_OUT_OF_MEMORY;
 			}
 			else
 			{
-				out_data[out_index >> 5] &= ~(unsigned long)
-					(1L << (out_index & 0x1f));
+				jam_dr_length = alloc_chars * 8;
 			}
 		}
+	}
 
-		jam_jtag_state = DREXIT1;
+	if (status == JAMC_SUCCESS)
+	{
+		/*
+		*	Copy preamble data, DR data, and postamble data into a buffer
+		*/
+		jam_jtag_concatenate_data
+		(
+			jam_dr_buffer,
+			jam_dr_preamble_data,
+			jam_dr_preamble,
+			in_data,
+			in_index,
+			count,
+			jam_dr_postamble_data,
+			jam_dr_postamble
+		);
 
-		status = jam_goto_jtag_state(jam_drstop_state);
+		/*
+		*	Do the DRSCAN
+		*/
+		jam_jtag_drscan
+		(
+			start_code,
+			shift_count,
+			jam_dr_buffer,
+			jam_dr_buffer
+		);
+
+		/* jam_jtag_drscan() always ends in DRPAUSE state */
+		jam_jtag_state = DRPAUSE;
+	}
+
+	if (status == JAMC_SUCCESS)
+	{
+		if (jam_drstop_state != DRPAUSE)
+		{
+			status = jam_goto_jtag_state(jam_drstop_state);
+		}
+	}
+
+	if (status == JAMC_SUCCESS)
+	{
+		/*
+		*	Now extract the returned data from the buffer
+		*/
+		jam_jtag_extract_target_data
+		(
+			jam_dr_buffer,
+			out_data,
+			out_index,
+			jam_dr_preamble,
+			count
+		);
 	}
 
 	return (status);
+}
+
+/****************************************************************************/
+/*																			*/
+
+void jam_free_jtag_padding_buffers(int reset_jtag)
+
+/*																			*/
+/*	Description:	Frees memory allocated for JTAG IR and DR buffers		*/
+/*																			*/
+/*	Returns:		nothing													*/
+/*																			*/
+/****************************************************************************/
+{
+	/*
+	*	If the JTAG interface was used, reset it to TLR
+	*/
+	if (reset_jtag && (jam_jtag_state != JAM_ILLEGAL_JTAG_STATE))
+	{
+		jam_jtag_reset_idle();
+	}
+
+	if (jam_workspace == NULL)
+	{
+		if (jam_dr_preamble_data != NULL)
+		{
+			jam_free(jam_dr_preamble_data);
+			jam_dr_preamble_data = NULL;
+		}
+
+		if (jam_dr_postamble_data != NULL)
+		{
+			jam_free(jam_dr_postamble_data);
+			jam_dr_postamble_data = NULL;
+		}
+
+		if (jam_dr_buffer != NULL)
+		{
+			jam_free(jam_dr_buffer);
+			jam_dr_buffer = NULL;
+		}
+
+		if (jam_ir_preamble_data != NULL)
+		{
+			jam_free(jam_ir_preamble_data);
+			jam_ir_preamble_data = NULL;
+		}
+
+		if (jam_ir_postamble_data != NULL)
+		{
+			jam_free(jam_ir_postamble_data);
+			jam_ir_postamble_data = NULL;
+		}
+
+		if (jam_ir_buffer != NULL)
+		{
+			jam_free(jam_ir_buffer);
+			jam_ir_buffer = NULL;
+		}
+	}
 }
