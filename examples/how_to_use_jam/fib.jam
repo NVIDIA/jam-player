@@ -1,0 +1,21 @@
+'
+' Fibonacci program
+'
+' Copyright (C) Altera Corporation 1997
+'
+
+PRINT "Fibonacci";
+
+INTEGER a = 0;
+INTEGER b = 1;
+INTEGER c;
+INTEGER count;
+
+FOR count = 0 TO 50;
+	LET c = a + b;
+	PRINT c;
+	LET a = b;
+	LET b = c;
+NEXT count;
+
+EXIT 0;

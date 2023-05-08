@@ -1,0 +1,21 @@
+'
+' Factorial program
+'
+' Copyright (C) Altera Corporation 1997
+'
+
+PRINT "Factorial";
+
+INTEGER num;
+INTEGER fact;
+INTEGER count;
+
+FOR num = 1 TO 20;
+	LET fact = 1;
+	FOR count = 1 TO num;
+		LET fact = fact * count;
+	NEXT count;
+	PRINT num, "! = ", fact;
+NEXT num;
+
+EXIT 0;

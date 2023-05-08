@@ -1,0 +1,26 @@
+'
+' Calculate n to the power p
+'
+' Use Jam Player -d option to set number and power:
+'
+'    Typing:        ..\..\exe\jam -dnumber=2 -dpower=4 power.jam
+'
+'    Gives output:  Power
+'                   2^4 = 16
+' 
+' Copyright (C) Altera Corporation 1997
+'
+
+PRINT "Power";
+
+INTEGER number = 1;
+INTEGER power = 1;
+INTEGER result = 1;
+INTEGER count;
+
+FOR count = 1 TO power;
+	LET result = result * number;
+NEXT count;
+PRINT number, "^", power, " = ", result;
+
+EXIT 0;

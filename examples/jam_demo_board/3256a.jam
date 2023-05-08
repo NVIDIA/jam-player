@@ -1,0 +1,533 @@
+' This Jam file programs a Lattice ispLSI3256 device.
+
+NOTE CREATOR "LAT2JAM converter 1.0";
+
+NOTE DEVICE "ispLSI3256A";
+
+INTEGER LAT_ADDSHFT     =       1;
+INTEGER LAT_DATSHFT     =       2;
+INTEGER LAT_UBLKERS     =       3;
+INTEGER LAT_PRGMHIGH    =       7;
+INTEGER LAT_PRGMLOW     =       8;
+INTEGER LAT_PRGMSC      =       9;
+INTEGER LAT_VRFLDHIP    =       10;
+INTEGER LAT_VRFLDLOP    =       11;
+INTEGER LAT_ERALL       =       16;
+INTEGER LAT_VRFLDHIE    =       18;
+INTEGER LAT_VRFLDLOE    =       19;
+INTEGER LAT_PRGENT      =       21;
+INTEGER LAT_IDCODE      =       22;
+INTEGER LAT_USERCODE    =       23;
+INTEGER LAT_BYP1        =       25;
+INTEGER LAT_PRGUSER     =       26;
+INTEGER LAT_BYP2        =       31;
+INTEGER LAT_INSTRLENGTH =       4;
+
+
+INTEGER IDLength = 32;
+BOOLEAN IDMATCH;
+BOOLEAN IDin[32];
+BOOLEAN ID3256[32] = BIN 00000000000000000000000001000011 ;
+BOOLEAN IDMASK[32] = BIN 00000000000000000000111111111111 ;
+
+
+
+INTEGER ADDR_LENGTH = 180;
+BOOLEAN ADDR_REG[180];
+
+'Variable initialization for verify ops
+INTEGER MAX_COLBITS = 338;
+INTEGER MAX_ROWBITS = 180;
+INTEGER VERIFY_TIME = 30;
+INTEGER ROWNUM;
+INTEGER COLNUM;
+INTEGER ERRNUM;
+INTEGER HIGHBASE_INDEX;
+INTEGER LOWBASE_INDEX;
+INTEGER ADDRESS;
+BOOLEAN SHIFTout[MAX_COLBITS];
+BOOLEAN SHIFTin[MAX_COLBITS];
+BOOLEAN ZERO_DATA[MAX_COLBITS];
+BOOLEAN VRFY_MATCH;
+BOOLEAN DO_ERASE = 0;
+BOOLEAN DO_PROGRAM = 0;
+BOOLEAN DO_VERIFY = 0;
+INTEGER CURRENT_ADDR_INDEX;
+
+'Variable initialization for program ops
+
+INTEGER PROG_TIME = 80;
+
+
+
+
+INTEGER ERASE_TIME = 200;
+
+
+
+
+
+
+BOOLEAN PROGBITS[121680] = ACA 
+gj300OhdwLzMlbtwj_L1L3y@@ljAXjUjJshzQUjNxNKG53is@@xNxbU56qhzIRjNxt@@@l@@
+@V@@@zJOG36a13nWHOsWZyeE47nHu8Eo6rHU8EYZmHS47YZyl@@HyBOWHSadAa0ChZIPPMcA
+poiOqcbXoiCJ6jPfiChV@@6bhm0cbPPL81LllQwzUljtxzw@ltpVzUFlzxTzUl@_@l@N13Sl
+txPlUll2Cm_yUDdtvTyElpshTU9zpxuLwddpxyk@@VwLm0xyEli_vTg03mBWen1401W08048
+1GGP020X30802Wu@@7Y080201G0802WWB04g0308a0Hb481a09W4i0I0zG281oX8G2aW@@V2
+29G281I09G2a0MX4g0309y@1W@@t@@@l@73U@Vm@_@Hoz@@@x@@@Zr@@@rQWV4u@hD11o@@_
+@@@z@33x@Tvt@@nR6RWu@@@Ls0@3B@hy3_@@Vx46m@@@FinW@tt_@M2_k@@z@@@x@@zVF8X@
+@@V@@x_Jl4ytZ@V@C8@LX@@x@JO2_VU_N8IC6Jm@@N@UC1@@F_x16YA6iBP8QcW@@lvmJ2U_
+@@N7Fu@@VTgaW@@l@TQ2_v@@zv@@dLVuFaW@@@z7m1_@@Vz@@@rRDm@x@@kTfey9z96YOLqf
+mui81z@@@Gc1_@_@z@t@N5iHaY1_t@@FFgm@R@VV1Ix4Fa7omHX1LC9yA6ILm9_@@xJ5ym@z
+_@Xf4rH9i0XXx@@@Cj7_YOm@VlVSc4bALiYbW@v@@5eJy@y@dkgIGhAJ5LixQpse1_@xlpXF
+9JHYUP9suC8HyXLh4y@h@739Xv@@l1jDYhPmp@@RwP5Dt9KgKtc6FxWL4s3ZTG9Kg0ZbV@4f
+QZmFOalAaCP9yJgY8LLihgYMQC46BXVICCIY1t@@@fmEfBN2pham@@@l@@lb@adu@@VCxd1l
+eOecc7ZlCubf7@DDOy53dHsuhs9TvgeKH5BLy8U737yCeY76vAguGN5logmz@@xLG9_ioW@@
+N_cIUiVDXBYCK7KYVICKrZXiVpCL0ZnNUKPiYVZLyFKY6b64pJ2@__@7wUO3i1FFJu8S2_Nt
+_@eMHsFLwiGI0nMwk0pFq42fAn4G6y_@@@NyXx7Lu@_@tV@@@qnDghomBdJUUQW@xp@yLXyy
+q0@Vz_FFteuh1BL99ke1_@ltR@4ILS3g8RW@@lzddmi9q3@@@VtHbedE3_lx@FhRW@@VtI5j
+aJ4ZqqCCdbXen94UcXI5X4MbX_sIyi7Zqq6ymdagqIm@x@V6O6KgW7_V@_tugYWoau0GCA_I
+Yj0DOEB9y@__V9qC9Lam_J6KRt3_@l@IguX_wI81F3gfnZwg29l4RknBXu4P8Cl4k8Z1x_@@
+Vv9HQQIKX66pP9nc6OyJ26Hgua@@z@h8hexD6_sBXvzgO6kDAZxXN0P8sd7QGqWqZgOMFF6Y
+Ocy0bhYJUyxV@tWe1w@t@ZP3Z59DutH3yz@@VLe4_@V@d6KYS5JWV@@@Pe94kq3VmOW@l@V@
+y@@rIoWt@@@s8P8NI3yz@@h@@@VUq4kR23l@@@_t@@z@@wlBYA7BHYz@@tx7YDKJ3gZAaANJ
+m@VyVHVdaAA3jTQWV@@@LOJOIa4y@@t7uZ7LRIIdd6u@x_VcZJyl@@l993PVKHpd6SZWA@cQ
+GCeoLNI2daIY@@_V@@@zk_@@@ODXhGhm@@@Uxf6yoA3lMAnml9Szh4v8jnFAekLB39JvX@@@
+zZy8vkM3oE9XEEjP6J6y@l@t0W1_V@@tVpZnQJmt@@@s7gCPppVKtYr@z@HO_P9AaUlbX9LI
+uVOmo4Ca3aDO7HC_yg2F@l@JzkHFq9C7k435pG@1ZDOk1JVHIuFqsJbV_@@hql@@dxB3NQZX
+@@@Twt@@VTpGLr9ylD3k@z@FoEaH78n@t@VWcOu@l@z8k7EwKY0rbO@_V66V3@z@@xwdGhsX
+icD3HElKoPgRz09y@k4Mic4rmBXlm9XTV@@WmLX@@@T@x@@hbA1_@@lRb9XRqPGNyCu9T9qO
+F6yk@@@aB9y@@VtrkAshN2dhB1@@@lDCXXgTDpsxg8cIRq8lGy@@L@nF3Ivd1pl33@@@@_@@
+Lz@@zbxF6sWsFtkhb2l8HGysGt@@NPV8n@@Vl_@@@WIyGe_gm_@@klg@@BubGiMCOKTOu@t@
+FPV9q3eCxcd1nix1@@_@1cwXcq9Hj@am@@@PkyyuLSIiXj76q73g@@lJOs3ZlAamwDJVo2n@
+_@F@@@@OpuXx@@@NznW@@@lazXH2EUW@@@NRayhkEgqokAgrd1R681@@@@_V@tz@whd47Cy@
+@zx@@l@tKCO@@@FxVCy_F6y@VVlkfJ6Zd4RnBar@Pme_gm@xzVHzCu16CazFLyx@@xtl@VTV
+9ypjDylz@FXF66Ds6572ZM@PGj@O8cVOy@F32B73_@@wJyN5__l@@zt3_x@@UFpFJSZahkfI
+cTin@@@3l_@@i_5INpC0y@@Vh@8no@@@H_EnR@@VUvK9UVguVV_lK1uzElGsSdD_@@nND66N
+ux1@@@J6_@@3ZN8PIZa56TY@@p@qnPGq@Cmxx@V2z8nx@@V6wOOMTFymk7y@N@lCCIS_@@dE
+gJa@t@@3FC2Kt3txRZs3mm@X8n@yVz@_E9H19SE43E9H51pI2@@@hc@@@Vkr9dT3fo@PmOOC
+mu@@V5q2n@@@7x@@VFz@@bdeekxPGriQfK1Kvp@@FI5Uyol4yl@t7fYJsZHHpO81z@@@__@@
+z@_VVFceQ@d16l_@3Fd4hdh2Fy@@Pr33@@@FrqeYyqvX@z@@QQaG9wgmx@_V9zaeDU9G_b@V
+mV9ujV@VhT6yuiACyB@dMZ4yo@y7OlGSV@@lqD6yl@@7pl4EkN2zxpWbzPW@_@x0ybmc6aek
+VF4sE66tH2j@pWpz9HMNCeS5Cqol4M903__@@D__@7f23qV@@VxkSMV73N_pWxzzmnza8f26
+u@txFMSRSql4q@r@tXDIy@@@v_l@lzV6uz@@t@@h@dssml@_@2_CmV_@l@@VuLzvnN_Cm@@_
+VVIa8lAIyvF3wJY4hwZXdyP0l@@@4LinyNCeYA6CAE6YRd4jxpW2mP0_v@@F@PWx@@lg@9Hy
+@Cm@@tlv@@V3F@@hQR3@@R@9knWcwPmPlge_UCu@V@FlU6q1gD6WI2DtxXFzPmGdyuSVCyYE
+CY0J2Fwx1@@@VnwpWTzPWx@_@k_PmxS89XT6uF@xt@@_Lbesm@zVze@Cm@dzl@@NdRzjHBUU
+OTTFqwF3YVd1_rr@FFt6xmp0@lx@_@@@xxG2z99XI58HcyCOiU9qda7ccd4_@@vl@s6jdJY4
+symktm81V9SaELS_@@NJ2LwJY7__l_30O2z9nZFzbm5PKn_@@@5Pyu7VTv@VsVtDCanlAE46
+3e@@@3TM8_@ttj_@@7sj42_d1lv3ZTtmm44mm@x@l@@@_UYOGBxCu2S94CeAUed1VXpWjWam
+5@IuYCCKAkAy@_@lyF9sAM5R@x1@@l@Duo0@@@BJ5u1lzl@5@x1p@@@_td@z@@@S443EAN2_
+z@vVqG2bwp0V@@@_Vj@30e4HDnWdzbGTuCOy5FSaF3god4_l@@z@@vx@@@th@@@X@au3NLWk
+@@FXHIieF6yy@@dqkAy@@xRx@@VkDCu7_@t@@@NEIa8H06CzE6yFoyx@@d00y@lVCuV@9@@_
+@@@zRm@x@@@t@@VY5v@V@@@Wu@@@z@@h0UW@t@3Fl@@VV68@@_76_hYd1Zgm0@@@FOL_@z@@
+@2_@@t@@@4XVuV@@OA01GuevAW0GeK02a280401WKZ0a@@V02W0Hy401W08gE01G080IC5J0
+80Y1W481YZfG281U19Gca0IW4G2i2Hu@@79G26Hoa4G2a0IW481a09WrOLY09ykwzUFxjUzy
+UFtqxzNRltxrz_@bt@@Vtxz_UVzxvzUlRzxzsUlthNjMFltxpsvTU9jNxuTUjcpxyFUdtPxy
+Qzct@@zpxyQ_j@nxyEFl@vTyElpsh@wDlpx3nHS4FoZgHS47YZy8S47nXu8E27v@tlZu8Sq7
+HZu8E47n1u8EY3mHS4EYZieDBJbHPKCBpwGPM69poiKMcrXoi_V@RMcAZseOMcbnoeDJc5Pf
+iCg3bPPM_x@@3Yd1juBXOzPG1zC84SCu@y@lIUFyp03M3d4_jUhjrRvgUgtYJvMFhdwDzMkr
+cwjyz@@MRhtwHzMl5twfUMlrRwjUhjrRzgUjNphzAFjJxLSAlsMxqUPlohvqUbt@@lcNxrEQ
+lshurEjjshzoUjNphzQFj@@V;
+
+'HEADER INSERTION MARKER
+
+
+integer loop;
+integer error;
+INTEGER i;
+INTEGER j;
+BOOLEAN k;
+
+INTEGER INSTRUCTION;
+INTEGER TEMPINSTRUCTION;
+
+BOOLEAN ir[5];
+BOOLEAN drout[1024];
+BOOLEAN drin[1024];
+BOOLEAN DEVICEMATCH;
+
+
+'VARIABLE INSERTION MARKER
+
+
+MAIN:
+
+		IF (!DO_PROGRAM && !DO_VERIFY && !DO_ERASE) THEN GOTO MAIN_1;
+		IF (!DO_PROGRAM && DO_VERIFY && DO_ERASE) THEN GOTO MAIN_1;
+
+        DRSTOP   IRPAUSE;
+        IRSTOP   DRPAUSE;
+        PADDING 0,0,0,0;
+
+        LET DEVICEMATCH = 0;
+
+        STATE RESET;
+        WAIT 100 USEC;
+        STATE IDLE;
+        WAIT 100 USEC;
+
+        LET error = 0;
+
+        FOR j = 0 TO 4;
+                LET ir[j] = 0;
+        NEXT j;
+
+        CALL READID_DEVICE;
+
+		IF (DO_PROGRAM) THEN LET DO_ERASE=1;
+
+        CALL PROGMODE_DEVICE;
+
+        IF (DO_ERASE) THEN CALL ERASE_DEVICE;
+
+        IF (DO_PROGRAM) THEN CALL PROGVRFY_DEVICE;
+        STATE RESET;
+
+        IF (DO_VERIFY) THEN CALL VERIFY_DEVICE;
+        STATE RESET;
+
+'MAIN INSERTION MARKER
+
+        LET INSTRUCTION = LAT_PRGENT;
+        CALL BUILD_INSTRUCTION;
+        irscan  5,ir[0..4];
+        WAIT 100 USEC;
+        STATE IDLE;
+        WAIT 100 USEC;
+        STATE RESET;
+        WAIT 100 USEC;
+
+MAIN_1:
+
+EXIT ERROR;
+
+BUILD_INSTRUCTION:
+
+        FOR j = 0 to LAT_INSTRLENGTH;
+                LET ir[j] = 0;
+                IF ((INSTRUCTION & (1 << j))!= 0 ) THEN LET ir[j] = 1;
+                LET TEMPINSTRUCTION = INSTRUCTION;
+        NEXT j;
+
+
+RETURN;
+              
+
+
+READID_DEVICE:
+
+        LET INSTRUCTION = LAT_IDCODE;
+        CALL BUILD_INSTRUCTION;
+        irscan  5,ir[0..4];
+        WAIT    100 USEC;
+        DRSCAN  IDLength,ID3256[0..(IDLENGTH-1)], CAPTURE IDin[0..(IDLENGTH-1)];
+
+COMPARE_ID:
+        LET IDMATCH = 1;
+
+        FOR loop = 0 to (IDLength-1);
+                IF (IDMASK[loop] ) THEN CALL CHECK_BIT; 
+        NEXT loop;
+        IF (IDMATCH == 1) THEN LET DEVICEMATCH = 1;
+        IF (IDMATCH == 1) THEN PRINT "ID MATCHES";
+RETURN;
+
+CHECK_BIT:
+       IF (IDin[loop] != ID3256[loop]) THEN LET IDMATCH = 0;  
+RETURN;
+
+
+
+
+PROGMODE_DEVICE:
+
+'Initialize the address to zero
+        FOR loop = 0 to (ADDR_LENGTH-1);
+			LET ADDR_REG[loop] = 0;
+		NEXT loop;
+
+
+'Step into the Programming mode by issuing
+'	the program statement three times
+        LET INSTRUCTION = LAT_PRGENT;
+        CALL BUILD_INSTRUCTION;
+        irscan  5,ir[0..4];
+        WAIT 200000 USEC;
+
+        irscan  5,ir[0..4];
+        WAIT 200000 USEC;
+
+        irscan  5,ir[0..4];
+        WAIT 200000 USEC;
+
+        FOR j = 0 to 400;
+                LET drin[(2*j)] = 1;
+                LET drin[((2*j) + 1)] = 1;
+                LET drout[(2*j)] = 1;
+                LET drout[((2*j)+1)] = 0;
+        NEXT j;
+
+
+RETURN;
+
+
+
+ERASE_DEVICE:
+
+         PRINT "ERASE Operation in Progress .....";
+
+
+'Bulk Erase the device completely
+        LET INSTRUCTION = LAT_ERALL;
+        CALL BUILD_INSTRUCTION;
+        irscan  5,ir[0..4];
+
+        WAIT 100 USEC;
+
+        STATE IDLE;
+
+        WAIT 200000 USEC;
+        WAIT 200000 USEC;
+        WAIT 200000 USEC;
+        WAIT 200000 USEC;
+        WAIT 200000 USEC;
+
+           
+        DRSCAN 188,drout[0..187], CAPTURE drin[0..187];
+
+RETURN;
+
+
+
+PROGVRFY_DEVICE:
+
+                PRINT "PROGRAMMING Operation in Progress .....";
+
+                LET CURRENT_ADDR_INDEX = 0;
+			
+'Initialize the ZeroData to zero
+		FOR loop = 0 to (MAX_COLBITS - 1);
+			LET ZERO_DATA[loop] = 0;
+		NEXT loop;
+
+
+'Initialize the address to zero
+        FOR loop = 0 to (ADDR_LENGTH-1);
+			LET ADDR_REG[loop] = 0;
+		NEXT loop;
+
+LET VRFY_MATCH = 1;
+LET ERRNUM = 0;
+
+ FOR ROWNUM = 0 to (MAX_ROWBITS - 1);           
+                LET ADDR_REG[CURRENT_ADDR_INDEX] = 0;
+                LET CURRENT_ADDR_INDEX = ROWNUM;
+		LET ADDR_REG[CURRENT_ADDR_INDEX] = 1;
+
+
+'Tell the Chip to Shift in the Address
+		LET INSTRUCTION = LAT_ADDSHFT;
+                CALL BUILD_INSTRUCTION;
+		irscan 5,ir[0..4];
+
+'Load the address array to the data register
+        DRSCAN 180,ADDR_REG[0..(ADDR_LENGTH-1)];
+
+		LET INSTRUCTION = LAT_DATSHFT;
+                CALL BUILD_INSTRUCTION;
+                irscan 5,ir[0..4];
+                wait 20 USEC;
+                STATE DRSHIFT;
+
+                LET HIGHBASE_INDEX = (2 * ROWNUM * MAX_COLBITS);
+                LET LOWBASE_INDEX = (2 * ROWNUM * MAX_COLBITS) + MAX_COLBITS;
+                DRSCAN MAX_COLBITS,PROGBITS[(HIGHBASE_INDEX)..(HIGHBASE_INDEX+(MAX_COLBITS - 1))], CAPTURE SHIFTin[0..(MAX_COLBITS-1)];
+                WAIT 20 USEC;
+                LET INSTRUCTION = LAT_PRGMHIGH;
+                CALL BUILD_INSTRUCTION;
+		irscan 5,ir[0..4];
+                WAIT    30 USEC;
+                STATE IDLE;
+                FOR loop = 0 to PROG_TIME;
+                        WAIT 1000 USEC;
+                next loop;
+         
+'Tell the Chip to Verify the High Data;
+		LET INSTRUCTION = LAT_VRFLDHIP;
+                CALL BUILD_INSTRUCTION;
+		irscan 5,ir[0..4];
+                WAIT    20 USEC;
+                STATE IDLE;
+                WAIT VERIFY_TIME USEC;
+		LET INSTRUCTION = LAT_DATSHFT;
+                CALL BUILD_INSTRUCTION;
+		irscan 5,ir[0..4];
+		DRSCAN MAX_COLBITS,ZERO_DATA[0..(MAX_COLBITS - 1)], CAPTURE SHIFTin[0..(MAX_COLBITS-1)];
+                FOR loop = 0 to (MAX_COLBITS-1);
+                                LET ADDRESS = HIGHBASE_INDEX+loop;
+                                IF (PROGBITS[HIGHBASE_INDEX + loop] != SHIFTin[loop]) THEN CALL PRINT_NOPRGM;
+		NEXT loop;
+
+
+'Tell the Chip to Shift in the Address
+		LET INSTRUCTION = LAT_ADDSHFT;
+                CALL BUILD_INSTRUCTION;
+		irscan 5,ir[0..4];
+
+'Load the address array to the data register
+        DRSCAN 180,ADDR_REG[0..(ADDR_LENGTH-1)];
+
+		LET INSTRUCTION = LAT_DATSHFT;
+                CALL BUILD_INSTRUCTION;
+		irscan 5,ir[0..4];            
+                WAIT 20 USEC;
+                DRSCAN MAX_COLBITS,PROGBITS[(LOWBASE_INDEX)..(LOWBASE_INDEX+(MAX_COLBITS - 1))], CAPTURE SHIFTin[0..(MAX_COLBITS-1)];
+                WAIT 20 USEC;
+                LET INSTRUCTION = LAT_PRGMLOW;
+                CALL BUILD_INSTRUCTION;
+		irscan 5,ir[0..4];
+                WAIT    20 USEC;
+                STATE IDLE;
+                FOR loop = 0 to PROG_TIME;
+                        WAIT 1000 USEC;
+                NEXT loop;         
+'Tell the Chip to Verify the LOW Data;
+                LET INSTRUCTION = LAT_VRFLDLOP;
+                CALL BUILD_INSTRUCTION;
+		irscan 5,ir[0..4];
+                WAIT    20 USEC;
+                STATE IDLE;
+                WAIT VERIFY_TIME USEC;
+		LET INSTRUCTION = LAT_DATSHFT;
+                CALL BUILD_INSTRUCTION;
+		irscan 5,ir[0..4];
+                WAIT 20 USEC;
+		DRSCAN MAX_COLBITS,ZERO_DATA[0..(MAX_COLBITS - 1)], CAPTURE SHIFTin[0..(MAX_COLBITS-1)];
+                WAIT 20 USEC;
+                FOR loop = 0 to (MAX_COLBITS-1);
+                                LET ADDRESS = LOWBASE_INDEX+loop;
+                                IF (PROGBITS[LOWBASE_INDEX + loop] != SHIFTin[loop]) THEN CALL PRINT_NOPRGM;
+		NEXT loop;
+
+
+NEXT ROWNUM;
+		IF (VRFY_MATCH == 0) THEN PRINT "PROGRAMMING FAILURE";
+                IF (VRFY_MATCH != 0) THEN PRINT "PROGRAMMING SUCCESSFUL!!!!";
+
+RETURN;
+
+
+
+RETURN;
+
+PRINT_NOPRGM:
+                LET ERRNUM = ERRNUM+1;
+                LET VRFY_MATCH = 0;
+                PRINT "JED FILE = ",PROGBITS[ADDRESS],"  CHIP = ",SHIFTin[loop], " ROWNUM = ",ROWNUM, " COLNUM= ",loop, " err# ",ERRNUM;                
+RETURN;
+
+
+
+
+VERIFY_DEVICE:
+
+                PRINT "VERIFY Operation in Progress .....";
+
+                LET CURRENT_ADDR_INDEX = 0;
+			
+'Initialize the ZeroData to zero
+		FOR loop = 0 to (MAX_COLBITS - 1);
+			LET ZERO_DATA[loop] = 0;
+		NEXT loop;
+
+
+'Initialize the address to zero
+        FOR loop = 0 to (ADDR_LENGTH-1);
+			LET ADDR_REG[loop] = 0;
+		NEXT loop;
+
+LET VRFY_MATCH = 1;
+LET ERRNUM = 0;
+
+FOR ROWNUM = 0 to (MAX_ROWBITS - 1);
+                
+                LET ADDR_REG[CURRENT_ADDR_INDEX] = 0;
+                LET CURRENT_ADDR_INDEX = ROWNUM;
+		LET ADDR_REG[CURRENT_ADDR_INDEX] = 1;
+
+                LET HIGHBASE_INDEX = (2 * ROWNUM * MAX_COLBITS);
+                LET LOWBASE_INDEX = (2 * ROWNUM * MAX_COLBITS) + MAX_COLBITS ;
+
+'Tell the Chip to Shift in the Address
+		LET INSTRUCTION = LAT_ADDSHFT;
+                CALL BUILD_INSTRUCTION;
+		irscan 5,ir[0..4];
+
+'Load the address array to the data register
+        DRSCAN 180,ADDR_REG[0..(ADDR_LENGTH-1)];
+                      
+
+'Tell the Chip to Verify the High Data;
+		LET INSTRUCTION = LAT_VRFLDHIP;
+                CALL BUILD_INSTRUCTION;
+		irscan 5,ir[0..4];
+                WAIT    5 USEC;
+                STATE IDLE;
+
+        WAIT VERIFY_TIME USEC;
+
+
+		LET INSTRUCTION = LAT_DATSHFT;
+                CALL BUILD_INSTRUCTION;
+		irscan 5,ir[0..4];
+
+
+		DRSCAN MAX_COLBITS,ZERO_DATA[0..(MAX_COLBITS - 1)], CAPTURE SHIFTin[0..(MAX_COLBITS-1)];
+	
+                FOR loop = 0 to (MAX_COLBITS-1);
+                                LET ADDRESS = HIGHBASE_INDEX+loop;
+                                IF (PROGBITS[HIGHBASE_INDEX + loop] != SHIFTin[loop]) THEN CALL PRINT_NOVRFY;
+		NEXT loop;
+
+
+'Tell the Chip to Verify the Low Data;
+		LET INSTRUCTION = LAT_VRFLDLOP;
+                CALL BUILD_INSTRUCTION;
+		irscan 5,ir[0..4];
+                WAIT 5 USEC;
+                STATE IDLE;
+
+        WAIT VERIFY_TIME USEC;
+
+		LET INSTRUCTION = LAT_DATSHFT;
+                CALL BUILD_INSTRUCTION;
+		irscan 5,ir[0..4];
+
+		DRSCAN MAX_COLBITS,ZERO_DATA[0..(MAX_COLBITS - 1)], CAPTURE SHIFTin[0..(MAX_COLBITS-1)];
+	
+		FOR loop = 0 to (MAX_COLBITS-1);			
+                                LET ADDRESS = LOWBASE_INDEX+loop;
+                                IF (PROGBITS[LOWBASE_INDEX + loop] != SHIFTin[loop]) THEN CALL PRINT_NOVRFY;
+		NEXT loop;
+                                 
+               NEXT ROWNUM;
+
+		IF (VRFY_MATCH == 0) THEN PRINT "VERIFY FAILURE";
+                IF (VRFY_MATCH != 0) THEN PRINT "VERIFY SUCCESSFUL!!!!";
+
+
+RETURN;
+
+PRINT_NOVRFY:
+                LET ERRNUM = ERRNUM+1;
+                LET VRFY_MATCH = 0;
+                PRINT "JED FILE = ",PROGBITS[ADDRESS],"  CHIP = ",SHIFTin[loop], " ROWNUM = ",ROWNUM, " COLNUM= ",loop, " err# ",ERRNUM;
+                
+RETURN;
+
+
+'CODE INSERTION MARKER
+
+
+CRC 2299;

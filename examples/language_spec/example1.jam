@@ -1,0 +1,25 @@
+'Initialize instruction and data arrays
+BOOLEAN read_data[32];
+BOOLEAN I_IDCODE[10] = BIN 1001101000;
+BOOLEAN ONES_DATA[32] = HEX FFFFFFFF;
+
+INTEGER i;
+
+'Set up stop state for IRSCAN
+IRSTOP IRPAUSE;
+
+'Initialize device
+STATE RESET;
+
+IRSCAN 10, I_IDCODE[0..9];	'LOAD IDCODE INSTRUCTION
+STATE IDLE;
+WAIT 5 USEC;
+WAIT 3 CYCLES;
+DRSCAN 32, ONES_DATA[0..31], CAPTURE read_data[0..31]; 	'CAPTURE IDCODE
+
+PRINT "IDCODE:";
+FOR i=0 TO 31;
+	PRINT read_data[i];
+NEXT i;
+
+EXIT 0;

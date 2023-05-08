@@ -1,0 +1,15 @@
+'
+' Square root
+'
+' Copyright (C) Altera Corporation 1997
+'
+
+print "Sqrt";
+
+integer i;
+
+for i = -100 To 100;
+print "sqrt(", i, ") = ", sqrt(abs(i));
+next i;
+
+exit 0;
