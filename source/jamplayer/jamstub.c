@@ -1385,8 +1385,10 @@ if (optind < argc)
 				reset_jtag, &error_line, &exit_code, &format_version);
 			time(&end_time);
 
+			exit_status = -1;
 			if (exec_result == JAMC_SUCCESS)
 			{
+				exit_status = 0;
 				if (format_version == 2)
 				{
 					switch (exit_code)
