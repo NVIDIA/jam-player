@@ -1429,7 +1429,8 @@ if (optind < argc)
 					default: exit_string = "Unknown exit code"; break;
 					}
 				}
-
+				if (exit_code != 0)
+					exit_status = exit_code;
 				printf("Exit code = %d... %s\n", exit_code, exit_string);
 			}
 			else if ((format_version == 2) &&
